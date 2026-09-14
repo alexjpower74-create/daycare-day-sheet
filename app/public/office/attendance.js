@@ -76,7 +76,14 @@ function cell(ctx, child, date, day) {
     }
     return nodes
   }
-  if (day.status === 'away') return h('span', { class: 'chip chip-away' }, `Away: ${reasonLabel(day.absence)}`)
+  if (day.status === 'away') {
+    return [
+      h('span', { class: 'chip chip-away' }, `Away: ${reasonLabel(day.absence)}`),
+      day.absence?.id
+        ? h('button', { type: 'button', class: 'btn btn-quiet remove-absence', 'aria-label': `Remove the absence for ${when}`, onclick: (e) => removeAbsence(ctx, day.absence, e.currentTarget) }, 'Remove')
+        : null,
+    ]
+  }
   if (day.status === 'missing') {
     return h('button', { type: 'button', class: 'cell-btn cell-missing', 'aria-label': `No record. Mark ${when} away`, onclick: () => openMarkAway(ctx, child.id, date) }, 'No record')
   }
@@ -215,6 +222,16 @@ function openMarkAway(ctx, childId, date) {
     await ctx.refresh()
     toast(`Marked away: ${r.absence.reason_label}.`, { slot: $('#attendance-status') })
   })
+}
+
+/** A mistaken absence comes off with DELETE /api/office/absences/:id; the table re-reads, so the cell shows what the Worker kept. */
+async function removeAbsence(ctx, absence, btn) {
+  btn.disabled = true
+  const r = await ctx.attempt(null, $('#attendance-status'), () => api.removeAbsence(absence.id))
+  if (btn.isConnected) btn.disabled = false
+  if (!r) return
+  await ctx.refresh()
+  toast(`Removed: away (${reasonLabel(absence)}).`, { slot: $('#attendance-status') })
 }
 
 async function download(path, btn, ctx) {
