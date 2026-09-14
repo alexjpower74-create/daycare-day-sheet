@@ -351,3 +351,107 @@ Running 1 test using 1 worker
   1 failed
     [chromium-390] › tests/web/attendance.spec.mjs:131:1 › today's open visit reads Still here with no flag and no Fix a time; an earlier open visit still reads Not signed out
 ----- verdict: RED as intended
+
+===== (h) overnight-fix: Fix a time sends the cell date as the sign-in date
+      2026-09-14T13:42:42.929Z · break in the copy's app/public/office/attendance.js · attendance.spec.mjs --grep "second day of an overnight visit" --project chromium-390
+
+Running 1 test using 1 worker
+
+[1/1] [chromium-390] › tests/web/attendance.spec.mjs:151:1 › Fix a time from the second day of an overnight visit sends the visit's own dates
+  1) [chromium-390] › tests/web/attendance.spec.mjs:151:1 › Fix a time from the second day of an overnight visit sends the visit's own dates 
+
+    Error: the visit's own sign-in date
+
+    expect(locator).toHaveValue(expected) failed
+
+    Locator:  locator('#fix-dialog').locator('input[name="in_date"]')
+    Expected: "2026-09-14"
+    Received: "2026-09-15"
+    Timeout:  8000ms
+
+    Call log:
+      - the visit's own sign-in date locator('#fix-dialog').locator('input[name="in_date"]') with timeout 8000ms
+      - waiting for locator('#fix-dialog').locator('input[name="in_date"]')
+        20 × locator resolved to <input type="date" name="in_date" id="fix-in_date"/>
+           - unexpected value "2026-09-15"
+
+
+      156 |   await tap(page, secondDay.locator('.fix-time'), 'Ava Sep 15: Fix a time')
+      157 |   const dialog = page.locator('#fix-dialog')
+    > 158 |   await expect(dialog.locator('input[name="in_date"]'), 'the visit\'s own sign-in date').toHaveValue('2026-09-14')
+          |                                                                                          ^
+      159 |   await expect(dialog.locator('input[name="out_date"]'), 'the visit\'s own sign-out date').toHaveValue('2026-09-15')
+      160 |   await dialog.locator('input[name="in_time"]').fill('22:00')
+      161 |   await type(page, dialog.locator('textarea[name="reason"]'), 'Arrived at 10:00 PM; the tablet was slow.')
+        at <repo>/app/tests/web/attendance.spec.mjs:158:90
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    tests/results/web-attendance-Fix-a-time--477bc-sends-the-visit-s-own-dates-chromium-390/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: tests/results/web-attendance-Fix-a-time--477bc-sends-the-visit-s-own-dates-chromium-390/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    tests/results/web-attendance-Fix-a-time--477bc-sends-the-visit-s-own-dates-chromium-390/trace.zip
+    Usage:
+
+        npx playwright show-trace tests/results/web-attendance-Fix-a-time--477bc-sends-the-visit-s-own-dates-chromium-390/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+  1 failed
+    [chromium-390] › tests/web/attendance.spec.mjs:151:1 › Fix a time from the second day of an overnight visit sends the visit's own dates
+----- verdict: RED but not for the intended reason (expected the output to name: fix from the Sep 15 cell answers 200)
+
+===== (h) overnight-fix: Fix a time sends the cell date as the sign-in date
+      2026-09-14T13:43:25.156Z · break in the copy's app/public/office/attendance.js · attendance.spec.mjs --grep "second day of an overnight visit" --project chromium-390
+
+Running 1 test using 1 worker
+
+[1/1] [chromium-390] › tests/web/attendance.spec.mjs:151:1 › Fix a time from the second day of an overnight visit sends the visit's own dates
+  1) [chromium-390] › tests/web/attendance.spec.mjs:151:1 › Fix a time from the second day of an overnight visit sends the visit's own dates 
+
+    Error: the visit's own sign-in date
+
+    expect(locator).toHaveValue(expected) failed
+
+    Locator:  locator('#fix-dialog').locator('input[name="in_date"]')
+    Expected: "2026-09-14"
+    Received: "2026-09-15"
+    Timeout:  8000ms
+
+    Call log:
+      - the visit's own sign-in date locator('#fix-dialog').locator('input[name="in_date"]') with timeout 8000ms
+      - waiting for locator('#fix-dialog').locator('input[name="in_date"]')
+        20 × locator resolved to <input type="date" name="in_date" id="fix-in_date"/>
+           - unexpected value "2026-09-15"
+
+
+      156 |   await tap(page, secondDay.locator('.fix-time'), 'Ava Sep 15: Fix a time')
+      157 |   const dialog = page.locator('#fix-dialog')
+    > 158 |   await expect(dialog.locator('input[name="in_date"]'), 'the visit\'s own sign-in date').toHaveValue('2026-09-14')
+          |                                                                                          ^
+      159 |   await expect(dialog.locator('input[name="out_date"]'), 'the visit\'s own sign-out date').toHaveValue('2026-09-15')
+      160 |   await dialog.locator('input[name="in_time"]').fill('22:00')
+      161 |   await type(page, dialog.locator('textarea[name="reason"]'), 'Arrived at 10:00 PM; the tablet was slow.')
+        at <repo>/app/tests/web/attendance.spec.mjs:158:90
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    tests/results/web-attendance-Fix-a-time--477bc-sends-the-visit-s-own-dates-chromium-390/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: tests/results/web-attendance-Fix-a-time--477bc-sends-the-visit-s-own-dates-chromium-390/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    tests/results/web-attendance-Fix-a-time--477bc-sends-the-visit-s-own-dates-chromium-390/trace.zip
+    Usage:
+
+        npx playwright show-trace tests/results/web-attendance-Fix-a-time--477bc-sends-the-visit-s-own-dates-chromium-390/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+  1 failed
+    [chromium-390] › tests/web/attendance.spec.mjs:151:1 › Fix a time from the second day of an overnight visit sends the visit's own dates
+----- verdict: RED as intended

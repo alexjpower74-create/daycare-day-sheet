@@ -146,3 +146,26 @@ test('today\'s open visit reads Still here with no flag and no Fix a time; an ea
   await expect(earlier.getByRole('button', { name: /Fix a time/ })).toHaveCount(1)
   await expect(earlier).not.toContainText('Still here')
 })
+
+// dd1's cross-review of the office, item 5: the second day of an overnight visit must fix the visit's own sign-in date.
+test('Fix a time from the second day of an overnight visit sends the visit\'s own dates', async ({ page, request }) => {
+  await setUp(request)
+  await openAttendance(page)
+  const secondDay = cell(page, 'c_ava', '2026-09-15')
+  await expect(secondDay).toHaveText('1 h 15 min')
+  await tap(page, secondDay.locator('.fix-time'), 'Ava Sep 15: Fix a time')
+  const dialog = page.locator('#fix-dialog')
+  await expect(dialog.locator('input[name="in_date"]'), 'the visit\'s own sign-in date').toHaveValue('2026-09-14')
+  await expect(dialog.locator('input[name="out_date"]'), 'the visit\'s own sign-out date').toHaveValue('2026-09-15')
+  await dialog.locator('input[name="in_time"]').fill('22:00')
+  await type(page, dialog.locator('textarea[name="reason"]'), 'Arrived at 10:00 PM; the tablet was slow.')
+  const answer = page.waitForResponse((r) => r.url().includes('/api/office/visits/') && r.request().method() === 'PUT')
+  await tap(page, dialog.locator('#fix-save'), 'Save the time')
+  const response = await answer
+  expect(response.status(), 'fix from the Sep 15 cell answers 200').toBe(200)
+  const { visit } = await response.json()
+  expect([visit.date, visit.in_at, visit.out_at]).toEqual(['2026-09-14', at('2026-09-14T22:00:00-02:30'), at('2026-09-15T01:15:00-02:30')])
+  await expect(dialog).toHaveCount(0)
+  await expect(cell(page, 'c_ava', '2026-09-14')).toHaveText('2 h')
+  await expect(secondDay).toHaveText('1 h 15 min')
+})
