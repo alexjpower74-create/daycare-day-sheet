@@ -69,3 +69,47 @@ test('the infant room register lists each child with signatures, moves, notes an
   await expect(page.locator('svg.signature').first()).toBeVisible()
   await shot(page, testInfo, 'web', 'register-print')
 })
+
+// The register never opens a browser dialog: problems are an on-page message in #register-error (role="alert").
+function failOnDialog(page) {
+  const dialogs = []
+  page.on('dialog', (d) => { dialogs.push(`${d.type()}: ${d.message()}`); d.dismiss().catch(() => {}) })
+  return dialogs
+}
+
+async function supervisorOnThisDevice(page) {
+  await page.goto('/office/')
+  await keypad(page, SUPERVISOR_PIN, page.locator('#pin-enter'))
+  await expect(page.getByRole('tab', { name: 'Today', exact: true })).toBeVisible()
+}
+
+test('the register with no room, or a room the API does not know, shows an on-page alert and no browser dialog', async ({ page, request }) => {
+  const dialogs = failOnDialog(page)
+  await supervisorOnThisDevice(page)
+
+  await page.goto('/office/register/?date=2026-09-14')
+  const problem = page.locator('#register-error')
+  await expect(problem).toHaveAttribute('role', 'alert')
+  await expect(problem).toHaveText('Open the register from the office Today tab, where each room has "Print the daily register".')
+  await expect(page.locator('#register-table')).toHaveCount(0)
+
+  const dana = await tokenAt(request, SUPERVISOR_PIN, PAGE_NOW)
+  const unknown = await api(request, 'GET', '/api/office/register?date=2026-09-14&room_id=r_nowhere', undefined, bearer(dana), { now: PAGE_NOW })
+  expect(unknown.status, 'the API refuses an unknown room').toBeGreaterThanOrEqual(400)
+  await page.goto('/office/register/?date=2026-09-14&room=r_nowhere')
+  await expect(problem, 'the load error is the API text, on the page').toHaveText(unknown.body.error)
+  await expect(page.locator('#register-table')).toHaveCount(0)
+
+  expect(dialogs, 'browser dialogs opened by the register').toEqual([])
+})
+
+test('an educator on this device sees the supervisor-only message on the register page, not a dialog', async ({ page }) => {
+  const dialogs = failOnDialog(page)
+  await page.goto('/office/')
+  await keypad(page, EDUCATOR_PIN, page.locator('#pin-enter'))
+  await expect(page.locator('#office-refused')).toBeVisible()
+  await page.goto('/office/register/?date=2026-09-14&room=r_infant')
+  await expect(page.locator('#register-error')).toHaveText('Only the supervisor can open the office.')
+  await expect(page.locator('#register-error')).toHaveAttribute('role', 'alert')
+  expect(dialogs).toEqual([])
+})

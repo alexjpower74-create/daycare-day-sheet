@@ -27,18 +27,19 @@ function signIn(message) {
   if (message) pad.showError(message)
 }
 
-const alert = (text) => app.replaceChildren(h('p', { id: 'register-error', class: 'alert', role: 'alert' }, text))
+/** A problem is shown on the page in #register-error (role="alert"), never in a browser dialog. */
+const showProblem = (text) => app.replaceChildren(h('p', { id: 'register-error', class: 'alert', role: 'alert' }, text))
 
 async function load() {
   if (!staffSession.token()) return signIn()
-  if (staffSession.role() !== 'supervisor') return alert('Only the supervisor can open the office.')
-  if (!roomId) return alert('Open the register from the office Today tab, where each room has "Print the daily register".')
+  if (staffSession.role() !== 'supervisor') return showProblem('Only the supervisor can open the office.')
+  if (!roomId) return showProblem('Open the register from the office Today tab, where each room has "Print the daily register".')
   try {
     if (!date) date = (await api.info()).today
     build(await api.register(date, roomId))
   } catch (e) {
     if (e.status === 401) return signIn('Please sign in again.')
-    alert(e.message)
+    showProblem(e.message)
   }
 }
 
