@@ -42,5 +42,5 @@ export function signatureSvg(strokes) {
     for (let i = 0; i < s.length; i += 2) pts.push(`${i ? 'L' : 'M'}${Math.trunc(Number(s[i])) || 0} ${Math.trunc(Number(s[i + 1])) || 0}`)
     return pts.join(' ')
   }).join(' ')
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SIG_W} ${SIG_H}"><path d="${d}"/></svg>`
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SIG_W} ${SIG_H}"><path d="${d}" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>`
 }

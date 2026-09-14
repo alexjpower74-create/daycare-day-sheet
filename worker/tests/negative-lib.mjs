@@ -14,7 +14,8 @@ const SKIP = new Set(['.negative', '.wrangler', 'node_modules'])
 const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 // patches: [{ file, from, to }] — `from` must occur exactly once in the file.
-export async function negative({ name, why, patches, args, expectRed, port = 7805 }) {
+// NEG_PORT overrides the port (default 7805), so the lead's QA can run the controls on its own port.
+export async function negative({ name, why, patches, args, expectRed, port = Number(process.env.NEG_PORT || 7805) }) {
   const root = path.join(WORKER, '.negative', name)
   const copy = path.join(root, 'worker')
   rmSync(root, { recursive: true, force: true })
