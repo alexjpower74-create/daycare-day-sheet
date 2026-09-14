@@ -101,9 +101,10 @@ function childCard(c, groupOf) {
   avatar(c.initials, groupOf[c.room_id], 'lg'),
   h('span', { class: 'child-text' },
     h('span', { class: 'child-name' }, c.name),
-    h('span', { class: 'child-room' }, c.room_name || ''),
-    h('span', { class: 'status-pill', 'data-status': c.status }, c.status_label),
-    c.awaiting_signature ? h('span', { class: 'chip-sign' }, 'Signature needed') : null))
+    h('span', { class: 'child-room' }, c.room_name || '')),
+  // The status takes the card's full width (door.css), so a short label never wraps beside the avatar.
+  h('span', { class: 'status-pill', 'data-status': c.status }, c.status_label),
+  c.awaiting_signature ? h('span', { class: 'chip-sign' }, 'Signature needed') : null)
 }
 
 function drawGrid() {

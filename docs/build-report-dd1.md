@@ -2,6 +2,42 @@
 
 A record, not a queue. Newest milestone at the top.
 
+## Next round — Still here (item 2) and door pills (item 3) — DONE
+
+### The M4 commits, guard-checked after the fact (lead's request)
+
+- **`rig guard --agent dd1 --base bdbcaa9` refused.** It listed PLAN.md, DECISIONS.md, README.md, dd2's office, room and note pages, their specs and shots, docs/shots, tools/docs-shots.mjs and more. Every one of those came into rig/dd1 through the merges of main since bdbcaa9 (other owners' commits); that base compares the whole branch, merges included.
+- **Scoped to what this branch adds, it passes:** `rig guard --agent dd1 --base main` → `ok dd1: 26 file(s), all inside slice (vs main)`.
+- **Per commit** (`git show --name-only`), files outside dd1's Owns: 6501c93 → 0, 3814615 → 0, cfbc2aa → 0.
+- **So 3814615 and cfbc2aa are guard-clean.** The hand check in M4 matched.
+
+### Item 2 — Still here (Worker) — commit 5172f12
+
+- **The change (`attendance.js`).** One helper, `isStillHere(part)`, true for an open visit dated today.
+  - That day carries `still_here: true` (every day object now has `still_here`).
+  - Its CSV row's Note reads `Still here`.
+  - It is not counted in `not_signed_out`, so the summary's `Not signed out` column counts only open visits dated before today.
+  - `open: true` stays, as API.md says.
+- **Tests.**
+  - The API test reads Ava, signed in at 9:00 AM and never out, over Sep 14–15. At 11:00 AM on Sep 14: `still_here: true`, `not_signed_out: 0`, Note `Still here`, summary 0 (Ava and Total). At 10:00 AM on Sep 15: `still_here: false`, `not_signed_out: 1`, Note `Not signed out`, summary 1.
+  - A unit test does the same in `buildAttendance`.
+  - The existing across-midnight and last-week open-visit tests gained `still_here: false`.
+  - The `=SUM(A1)` CSV test's open visit is read on its own day, so its Note is now `Still here`.
+- **`negative:stillhere`** (the copy never treats a visit as still here) went red: `+ still_here: false` / `- still_here: true`.
+- **`npm test`:** exit 0 (unit 32, API 43, setup 1).
+
+### Item 3 — door status pills on one line
+
+- **The cause.** At 1024×768 a card is about 232 px wide, but the pill sat in the text column beside the 56 px avatar, about 120 px. "In since 12:45 PM" and "Gone home at 12:45 PM" wrapped there.
+- **The fix.** The pill and the "Signature needed" chip now sit under the avatar across the card's full width (`grid-column: 1 / -1`), at 14 px text with a set line height. The long "Still signed in from …" label still wraps, as the rounded box from M4.
+- **Door spec** (`status pills: …`, both engines, 1024×768).
+  - Setup: Ava in at 12:45 PM, Liam gone home at 12:45 PM, Nora not in yet, Isla not booked, and Ruby's open visit from Tue Sep 8.
+  - Each short pill has the exact text, `scrollWidth ≤ clientWidth`, one line of text (height inside padding and border ÷ line height), and its right edge inside its card.
+  - Ruby's long pill hides nothing and stays inside its card.
+  - Screenshot: `8-status-pills`.
+- **Control (q) `negative-pill-wrap`** (the copy puts the pill back in column 2 beside the avatar) went red: `In since 12:45 PM stays on one line — Expected: 1, Received: 2`. `npm run negative:door` now runs 7 controls.
+- **Door suite:** 28/28 on chromium-tablet and webkit-tablet.
+
 ## M4 — follow-ups (a) and the "Still signed in" door label (b) — DONE
 
 ### (a) `GET /api/office/follow-ups` — commit 6501c93
