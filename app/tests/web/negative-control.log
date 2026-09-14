@@ -1,0 +1,197 @@
+
+===== (a) card-state: room card always data-state="ok"
+      2026-09-14T12:12:14.473Z · break in the copy's app/public/room/room.js · room.spec.mjs --grep "the room card follows the meter" --project chromium-390
+
+Running 1 test using 1 worker
+
+[1/1] [chromium-390] › tests/web/room.spec.mjs:43:1 › the room card follows the meter: at the limit, over, no staff, and a move changes both cards
+  1) [chromium-390] › tests/web/room.spec.mjs:43:1 › the room card follows the meter: at the limit, over, no staff, and a move changes both cards 
+
+    Error: room card data-state at_limit
+
+    expect(locator).toHaveAttribute(expected) failed
+
+    Locator:  locator('button.room[data-room="r_infant"]')
+    Expected: "at_limit"
+    Received: "ok"
+    Timeout:  6500ms
+
+    Call log:
+      - room card data-state at_limit locator('button.room[data-room="r_infant"]') with timeout 6500ms
+      - waiting for locator('button.room[data-room="r_infant"]')
+        17 × locator resolved to <button class="room" type="button" data-state="ok" aria-pressed="true" data-room="r_infant">…</button>
+           - unexpected value "ok"
+
+
+      55 |
+      56 |   for (const c of ['ava', 'liam', 'nora']) await signInViaApi(request, door, `c_${c}`, `p_${c}_mother`)
+    > 57 |   await expect(infant, 'room card data-state at_limit').toHaveAttribute('data-state', 'at_limit', { timeout: POLL })
+         |                                                         ^
+      58 |   expect(await stateColour(infant), 'stateColour of the at_limit card').toBe(STATE_RGB.at_limit)
+      59 |   const atLimit = (await api(request, 'GET', '/api/staff/today', undefined, bearer(reader))).body.rooms.find((r) => r.room.id === 'r_infant').meter
+      60 |   await expect(page.locator('#room-label')).toHaveText(atLimit.label)
+        at <repo>/app/tests/web/room.spec.mjs:57:57
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    tests/results/web-room-the-room-card-fol-e58d7-d-a-move-changes-both-cards-chromium-390/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: tests/results/web-room-the-room-card-fol-e58d7-d-a-move-changes-both-cards-chromium-390/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    tests/results/web-room-the-room-card-fol-e58d7-d-a-move-changes-both-cards-chromium-390/trace.zip
+    Usage:
+
+        npx playwright show-trace tests/results/web-room-the-room-card-fol-e58d7-d-a-move-changes-both-cards-chromium-390/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+  1 failed
+    [chromium-390] › tests/web/room.spec.mjs:43:1 › the room card follows the meter: at the limit, over, no staff, and a move changes both cards
+----- verdict: RED as intended
+
+===== (b) over-colour: [data-state="over"] painted with the ok colour
+      2026-09-14T12:12:26.384Z · break in the copy's app/public/style.css · room.spec.mjs --grep "the room card follows the meter" --project chromium-390
+
+Running 1 test using 1 worker
+
+[1/1] [chromium-390] › tests/web/room.spec.mjs:43:1 › the room card follows the meter: at the limit, over, no staff, and a move changes both cards
+  1) [chromium-390] › tests/web/room.spec.mjs:43:1 › the room card follows the meter: at the limit, over, no staff, and a move changes both cards 
+
+    Error: stateColour of the over card
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "rgb(248, 113, 113)"
+    Received: "rgb(74, 222, 128)"
+
+      63 |   await signInViaApi(request, door, 'c_owen', 'p_owen_mother')
+      64 |   await expect(infant, 'room card data-state over').toHaveAttribute('data-state', 'over', { timeout: POLL })
+    > 65 |   expect(await stateColour(infant), 'stateColour of the over card').toBe(STATE_RGB.over)
+         |                                                                     ^
+      66 |   await expect(page.locator('#room-label')).toContainText('Needs 1 more staff.')
+      67 |   await shot(page, testInfo, 'web', 'room-over')
+      68 |
+        at <repo>/app/tests/web/room.spec.mjs:65:69
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    tests/results/web-room-the-room-card-fol-e58d7-d-a-move-changes-both-cards-chromium-390/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: tests/results/web-room-the-room-card-fol-e58d7-d-a-move-changes-both-cards-chromium-390/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    tests/results/web-room-the-room-card-fol-e58d7-d-a-move-changes-both-cards-chromium-390/trace.zip
+    Usage:
+
+        npx playwright show-trace tests/results/web-room-the-room-card-fol-e58d7-d-a-move-changes-both-cards-chromium-390/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+  1 failed
+    [chromium-390] › tests/web/room.spec.mjs:43:1 › the room card follows the meter: at the limit, over, no staff, and a move changes both cards
+----- verdict: RED as intended
+
+===== (c) expiry-page: parent page ignores 404/410 and keeps the last note
+      2026-09-14T12:15:55.092Z · break in the copy's app/public/note/note.js · note.spec.mjs --grep "parent link on a parent phone" --project chromium-390
+
+Running 1 test using 1 worker
+
+[1/1] [chromium-390] › tests/web/note.spec.mjs:29:1 › staff note, parent link on a parent phone: the same note, live, still there at 11:59 PM, gone at midnight
+  1) [chromium-390] › tests/web/note.spec.mjs:29:1 › staff note, parent link on a parent phone: the same note, live, still there at 11:59 PM, gone at midnight 
+
+    Error: #note-error after the poll at midnight
+
+    expect(locator).toHaveText(expected) failed
+
+    Locator:  locator('#note-error')
+    Expected: "This link was for Monday, September 14 and stopped working at midnight. Ask the centre for today's note."
+    Received: ""
+    Timeout:  8000ms
+
+    Call log:
+      - #note-error after the poll at midnight locator('#note-error') with timeout 8000ms
+      - waiting for locator('#note-error')
+        20 × locator resolved to <p hidden="" role="alert" class="alert" id="note-error"></p>
+           - unexpected value ""
+
+
+      126 |   expect(gone.status).toBe(410)
+      127 |   await parent.clock.runFor(61_000)
+    > 128 |   await expect(parent.locator('#note-error'), '#note-error after the poll at midnight').toHaveText(gone.body.error)
+          |                                                                                         ^
+      129 |   await expect(parent.locator('#note [data-section]'), 'no child section after the poll at midnight').toHaveCount(0)
+      130 |   await parent.reload()
+      131 |   await expect(parent.locator('#note-error'), '#note-error after a reload at midnight').toHaveText(gone.body.error)
+        at <repo>/app/tests/web/note.spec.mjs:128:89
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    tests/results/web-note-staff-note-parent-b0804-t-11-59-PM-gone-at-midnight-chromium-390/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    tests/results/web-note-staff-note-parent-b0804-t-11-59-PM-gone-at-midnight-chromium-390/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: tests/results/web-note-staff-note-parent-b0804-t-11-59-PM-gone-at-midnight-chromium-390/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    tests/results/web-note-staff-note-parent-b0804-t-11-59-PM-gone-at-midnight-chromium-390/trace.zip
+    Usage:
+
+        npx playwright show-trace tests/results/web-note-staff-note-parent-b0804-t-11-59-PM-gone-at-midnight-chromium-390/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+  1 failed
+    [chromium-390] › tests/web/note.spec.mjs:29:1 › staff note, parent link on a parent phone: the same note, live, still there at 11:59 PM, gone at midnight
+----- verdict: RED as intended
+
+===== (d) overlay: transparent layer over the meal log buttons
+      2026-09-14T12:16:11.111Z · break in the copy's app/public/style.css · targets.spec.mjs --grep "never has a control under its header" --project chromium-390
+
+Running 1 test using 1 worker
+
+[1/1] [chromium-390] › tests/web/targets.spec.mjs:95:1 › the open child sheet never has a control under its header or its toast
+  1) [chromium-390] › tests/web/targets.spec.mjs:95:1 › the open child sheet never has a control under its header or its toast 
+
+    Error: tap(Ate all) hit-test at 73,308: something else is on top
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: ""
+    Received: "<div class=\"log-grid\"><button type=\"button\" class=\"btn log\" data-kind=\"meal\" data-value=\"all\">Ate all</button><button type=\"button\" class=\"btn log\" data-kind=\"m"
+
+       at helpers.mjs:84
+
+      82 |   const x = box.x + box.width / 2
+      83 |   const y = box.y + box.height / 2
+    > 84 |   expect(await hitTest(locator, x, y), `tap(${label}) hit-test at ${Math.round(x)},${Math.round(y)}: something else is on top`).toBe('')
+         |                                                                                                                                 ^
+      85 |   if (await isCoarse(page)) await page.touchscreen.tap(x, y)
+      86 |   else await page.mouse.click(x, y)
+      87 | }
+        at tap (<repo>/app/tests/helpers.mjs:84:129)
+        at <repo>/app/tests/web/targets.spec.mjs:106:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    tests/results/web-targets-the-open-child-28045-der-its-header-or-its-toast-chromium-390/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: tests/results/web-targets-the-open-child-28045-der-its-header-or-its-toast-chromium-390/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    tests/results/web-targets-the-open-child-28045-der-its-header-or-its-toast-chromium-390/trace.zip
+    Usage:
+
+        npx playwright show-trace tests/results/web-targets-the-open-child-28045-der-its-header-or-its-toast-chromium-390/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+  1 failed
+    [chromium-390] › tests/web/targets.spec.mjs:95:1 › the open child sheet never has a control under its header or its toast
+----- verdict: RED as intended

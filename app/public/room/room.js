@@ -22,8 +22,9 @@ export function mealFor(nowLocal) {
   if (t < '13:30') return 'lunch'
   return 'pm_snack'
 }
-const inLabel = (l) => (!l ? '' : /^\d/.test(l) ? `In since ${l}` : l)
-const sinceLabel = (l) => (!l ? '' : /^\d/.test(l) ? `Since ${l}` : l)
+// API.md: every time label is a bare time ("8:05 AM"); the page adds the words.
+const inLabel = (l) => (l ? `In since ${l}` : '')
+const sinceLabel = (l) => (l ? `Since ${l}` : '')
 
 function select(roomId) {
   selected = roomId
@@ -45,7 +46,7 @@ function signedOut(message) {
   $('#signout').hidden = true
   $('#me-name').textContent = ''
   api.info().then((i) => {
-    $('#centre-name').textContent = i.centre_name
+    if (i.centre_name) $('#centre-name').textContent = i.centre_name
     $('#date-label').textContent = i.date_label
   }).catch(() => {})
   showStaffSignIn(app, { message, onSignedIn: start })
@@ -57,6 +58,7 @@ async function start() {
       h('div', { class: 'room-main' },
         h('p', { id: 'offline', class: 'notice', role: 'status', hidden: true }),
         h('nav', { id: 'room-strip', class: 'strip', 'aria-label': 'Rooms' }),
+        h('div', { id: 'toast-home', class: 'status-line' }),
         h('section', { id: 'room-panel', class: 'meter-panel', 'aria-live': 'polite' }),
         h('h2', { class: 'section-title' }, 'Children here'),
         h('div', { id: 'children-grid', class: 'grid-children' })),
@@ -96,7 +98,7 @@ const findChild = (childId) => {
 // ---------- page ----------
 function render() {
   if (!today || !$('#room-strip')) return
-  $('#centre-name').textContent = today.centre_name
+  if (today.centre_name) $('#centre-name').textContent = today.centre_name
   $('#date-label').textContent = today.date_label
   $('#me-name').textContent = today.me?.staff?.name ? ` · ${today.me.staff.name}` : ''
 
@@ -202,7 +204,7 @@ function listSections({ room, notIn, away, gone }) {
 // ---------- sheets ----------
 function openSheet({ id, title, subtitle, initials, ageGroup, opener }) {
   closeSheet()
-  // A page toast is fixed over the page; inside a sheet it would sit on the sheet's controls. Toasts in a sheet use its own slot.
+  // A page message belongs to the page; toasts in a sheet use the sheet's own reserved slot.
   hideToast()
   const statusText = h('span', { class: 'sheet-status-text' }, subtitle || '')
   const slot = h('div', { class: 'sheet-status' }, statusText)
@@ -229,7 +231,8 @@ function closeSheet() {
   sheet = null
   hideToast()
   const t = document.getElementById('toast')
-  if (t) $('#toast-home').append(t)
+  const home = $('#toast-home')
+  if (t && home) home.append(t)
   s.el.remove()
   s.backdrop.remove()
   document.documentElement.classList.remove('sheet-open')

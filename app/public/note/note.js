@@ -20,7 +20,7 @@ function showNote(note) {
   staleEl.hidden = true
   noteEl.hidden = false
   printBtn.hidden = false
-  $('#centre-name').textContent = note.centre_name
+  if (note.centre_name) $('#centre-name').textContent = note.centre_name
   document.title = `Daily note: ${note.child.name}`
   renderIf(noteEl, note, renderNote)
 }
@@ -35,7 +35,7 @@ function showGone(message) {
   errorEl.textContent = message
   errorEl.hidden = false
   document.title = 'Daily note'
-  api.info().then((i) => { $('#centre-name').textContent = i.centre_name }).catch(() => {})
+  api.info().then((i) => { if (i.centre_name) $('#centre-name').textContent = i.centre_name }).catch(() => {})
 }
 
 async function load() {
