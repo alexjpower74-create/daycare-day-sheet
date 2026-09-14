@@ -116,7 +116,8 @@ async function readJson(request) {
 async function info(c) {
   const centre = await c.db.prepare('SELECT * FROM centre WHERE id = 1').first()
   return json({
-    centre_name: centre ? centre.name : '', sample: centre ? centre.sample === 1 : true, phone: centre ? centre.phone : '',
+    // Before the centre row exists (a migrated, empty D1) nothing is known: no name, and never a SAMPLE badge on a real deployment.
+    centre_name: centre ? centre.name : '', sample: centre ? centre.sample === 1 : false, phone: centre ? centre.phone : '',
     zone: TZ, today: c.today, date_label: dateLabel(c.today), long_label: longLabel(c.today), now: c.nowIso,
     now_local: localHHMM(c.now), time_label: timeLabel(c.now),
   })
