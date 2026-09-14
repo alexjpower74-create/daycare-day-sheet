@@ -92,3 +92,16 @@ run: npx playwright test tests/door/door.spec.mjs --project chromium-tablet --gr
     .negative/door-pill-wrap/results/door-door-status-pills-sho-890e9--label-wraps-inside-its-box-chromium-tablet/test-failed-1.png
   1 failed
 RESULT: RED as intended
+
+=== door negative:stale-sheet — 2026-09-14T13:58:09.961Z
+break: door.js submit no longer restarts the sheet on already_in / not_in / bad_state; it only shows the text and re-enables Done
+patched: app/public/door/door.js
+run: npx playwright test tests/door/door.spec.mjs --project chromium-tablet --grep "a change on another device while the sheet is open" (E2E_PORT 7806)
+  ✘  1 [chromium-tablet] › tests/door/door.spec.mjs:324:1 › a change on another device while the sheet is open: the 409 message shows and the sheet starts again with Sign out (9.4s)
+    Error: expect(locator).toHaveText(expected) failed
+    Locator: locator('#sheet-notice')
+    Expected: "Ava M. (SAMPLE) is already signed in."
+    Error: element(s) not found
+    .negative/door-stale-sheet/results/door-door-a-change-on-anot-ba6b7--starts-again-with-Sign-out-chromium-tablet/test-failed-1.png
+  1 failed
+RESULT: RED as intended

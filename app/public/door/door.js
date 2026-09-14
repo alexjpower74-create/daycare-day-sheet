@@ -342,6 +342,7 @@ async function submit(d, job, btn) {
     else answer = await doorApi.addSignature(job.pending.visit_id, job.pending.which, job.pending.person.id, signature)
   } catch (e) {
     if (e.status === 401) return showSetup()
+    if (e.status === 409 && ['already_in', 'not_in', 'bad_state'].includes(e.code)) return restartSheet(d.child.id, e.message)
     showStepError(e.message)
     btn.disabled = !pad.hasInk()
     return
@@ -352,6 +353,23 @@ async function submit(d, job, btn) {
   clearTimeout(sheet.idle)
   show(() => confirmStep(job, answer), { push: false })
   sheet.confirmTimer = setTimeout(() => closeSheet(), CONFIRM_MS)
+  refresh()
+}
+
+// The child changed on another device while this sheet was open (a 409): say so in the API's words, re-read the child and start
+// again from step 1, so a refused Sign in becomes Sign out instead of the same write again.
+async function restartSheet(childId, message) {
+  let detail
+  try {
+    detail = await doorApi.child(childId)
+  } catch (e) {
+    if (e.status === 401) return showSetup()
+    showStepError(e.message)
+    return
+  }
+  if (!sheet) return
+  sheet.steps = []
+  show(() => [h('p', { id: 'sheet-notice', class: 'sheet-error', role: 'alert' }, message), ...actionStep(detail)])
   refresh()
 }
 
