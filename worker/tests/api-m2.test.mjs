@@ -1,7 +1,7 @@
 // M2 API suite: the office, attendance and its CSVs, fixing a time, the register, and the demo seed. Fresh SAMPLE centre per test.
 import assert from 'node:assert/strict'
 import { beforeEach, test } from 'node:test'
-import { call, doorToken, nl, PIN, presence, reset, SIG_SVG, signIn, signOut, staffToken, T9 } from './api-helpers.mjs'
+import { call, doorToken, nl, PIN, presence, reset, SIG, SIG_SVG, signIn, signOut, staffToken, T9 } from './api-helpers.mjs'
 
 beforeEach(reset)
 
@@ -535,6 +535,51 @@ test('register: rows for one homeroom with dob, emergency contact, both signatur
   assert.deepEqual((await reg('r_infant', '2026-09-13')).body.rows, [])
   refused(await reg('r_attic'), 'room_id')
   refused(await reg('r_infant', 'yesterday'), 'date')
+})
+
+// ---------- follow-ups ----------
+
+test('follow-ups: a signature owed for a child who went home is listed, one 15 dates old is not, signing removes it; open visits from before today oldest first, not today\'s', async () => {
+  const door = await doorToken(nl('07:00', '2026-08-31'))
+  const record = async (child, person, date, hhmm) => {
+    const now = nl(hhmm, date)
+    const r = await call('POST', `/api/staff/children/${child}/in`, { token: await staffToken(PIN.marie, now), body: { person_id: person }, now })
+    assert.equal(r.status, 201, JSON.stringify(r.body))
+    return r.body.visit
+  }
+  // Mon Aug 31 is the 15th date back from Mon Sep 14; Tue Sep 1 is the 14th.
+  const old = await record('c_liam', 'p_liam_mother', '2026-08-31', '09:00')
+  await signOut(door, 'c_liam', 'p_liam_father', nl('16:00', '2026-08-31'))
+  const edge = await record('c_nora', 'p_nora_father', '2026-09-01', '09:00')
+  await signOut(door, 'c_nora', 'p_nora_mother', nl('16:00', '2026-09-01'))
+  const ruby = await signIn(door, 'c_ruby', 'p_ruby_mother', nl('08:05', '2026-09-08'))
+  const finn = await signIn(door, 'c_finn', 'p_finn_father', nl('08:30', '2026-09-10'))
+  const ava = await record('c_ava', 'p_ava_mother', '2026-09-14', '08:05')
+  await signOut(door, 'c_ava', 'p_ava_father', nl('16:30'))
+  await signIn(door, 'c_ben', 'p_ben_mother', nl('09:00'))
+  const now = nl('17:00')
+  const dana = await sup(now)
+  const f = await call('GET', '/api/office/follow-ups', { token: dana, now })
+  assert.equal(f.status, 200, JSON.stringify(f.body))
+  const marie = { id: 's_marie', initials: 'MT' }
+  assert.deepEqual(f.body.pending_signatures, [
+    { visit_id: ava.id, child: { id: 'c_ava', name: 'Ava M. (SAMPLE)' }, which: 'in', date: '2026-09-14', date_label: 'Mon Sep 14',
+      time_label: '8:05 AM', person: { id: 'p_ava_mother', name: 'Sarah M. (SAMPLE)' }, recorded_by: marie },
+    { visit_id: edge.id, child: { id: 'c_nora', name: 'Nora B. (SAMPLE)' }, which: 'in', date: '2026-09-01', date_label: 'Tue Sep 1',
+      time_label: '9:00 AM', person: { id: 'p_nora_father', name: 'Chris B. (SAMPLE)' }, recorded_by: marie },
+  ], 'Ava went home and still owes a signature; Nora on the 14th date is listed')
+  assert.ok(!JSON.stringify(f.body).includes(old.id), 'a signature owed 15 dates ago is not a follow-up')
+  assert.deepEqual(f.body.not_signed_out, [
+    { visit_id: ruby.visit.id, child: { id: 'c_ruby', name: 'Ruby E. (SAMPLE)' }, date: '2026-09-08', date_label: 'Tue Sep 8', in_label: '8:05 AM',
+      in_by: { id: 'p_ruby_mother', name: 'Diane E. (SAMPLE)' } },
+    { visit_id: finn.visit.id, child: { id: 'c_finn', name: 'Finn D. (SAMPLE)' }, date: '2026-09-10', date_label: 'Thu Sep 10', in_label: '8:30 AM',
+      in_by: { id: 'p_finn_father', name: 'Brian D. (SAMPLE)' } },
+  ], 'open visits from before today, oldest first; Ben, signed in today, is not one')
+  const signed = await call('POST', `/api/door/visits/${ava.id}/sign`, { token: door, body: { which: 'in', person_id: 'p_ava_mother', signature: SIG }, now: nl('17:05') })
+  assert.equal(signed.status, 200, JSON.stringify(signed.body))
+  const after = await call('GET', '/api/office/follow-ups', { token: dana, now: nl('17:06') })
+  assert.deepEqual(after.body.pending_signatures.map((p) => p.visit_id), [edge.id], 'signing at the door removes it')
+  assert.equal((await call('GET', '/api/office/follow-ups', { token: await staffToken(PIN.marie, now), now })).status, 403)
 })
 
 // ---------- the demo seed ----------

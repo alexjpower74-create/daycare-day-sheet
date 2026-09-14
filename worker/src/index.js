@@ -7,7 +7,7 @@ import {
   createAbsence, createChild, createPerson, createRoom, createStaff, deactivatePerson, deleteAbsence, fixVisit, officeChildren,
   officeRatios, officeRooms, officeStaff, putRatio, resetRatio, updateChild, updatePerson, updateRoom, updateStaff,
 } from './office.js'
-import { attendance, attendanceCsv, register, summaryCsv } from './reports.js'
+import { attendance, attendanceCsv, followUps, register, summaryCsv } from './reports.js'
 import { resetSample, seedDemo } from './seed.js'
 import { addLog, getNote, makeLink, moveChild, parentNote, presence, putActivity, putNote, staffChild, staffToday, voidLog } from './staff.js'
 import { dateLabel, localDate, localHHMM, longLabel, timeLabel, TZ } from './time.js'
@@ -59,6 +59,7 @@ const ROUTES = [
   ['GET', '/api/office/attendance.csv', attendanceCsv, 'office'],
   ['GET', '/api/office/attendance-summary.csv', summaryCsv, 'office'],
   ['GET', '/api/office/register', register, 'office'],
+  ['GET', '/api/office/follow-ups', followUps, 'office'],
   ['POST', '/api/test/reset', testReset, 'test'],
   ['POST', '/api/test/seed', testSeed, 'test'],
 ].map(([method, pattern, handler, access]) => {
