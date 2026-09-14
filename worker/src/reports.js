@@ -30,7 +30,7 @@ async function loadAttendance(c) {
     c.db.prepare('SELECT * FROM absences WHERE date BETWEEN ? AND ?').bind(from, to),
     c.db.prepare('SELECT id, name FROM people'),
   ])).map((r) => r.results)
-  return buildAttendance({ from, to, children, rooms, visits, absences, people })
+  return buildAttendance({ from, to, today: c.today, children, rooms, visits, absences, people })
 }
 
 export async function attendance(c) {

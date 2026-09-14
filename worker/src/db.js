@@ -214,7 +214,7 @@ export async function loadNote(c, childId, date, buildNote) {
   const activityOf = new Map(activity.map((a) => [a.room_id, a]))
   return buildNote({
     centre: centre[0], child: child[0], room: roomMap.get(child[0].home_room_id), date, visits, logs,
-    activities: placed.map((p) => ({ room_name: roomMap.get(p.room_id)?.name ?? '', text: activityOf.get(p.room_id)?.text ?? '',
+    activities: placed.map((p) => ({ room_id: p.room_id, room_name: roomMap.get(p.room_id)?.name ?? '', text: activityOf.get(p.room_id)?.text ?? '',
       updated_at: activityOf.get(p.room_id)?.updated_at ?? null })),
     noteLine: lines[0] || null, people: byId(people), staff: byId(staff), now: c.now,
   })

@@ -48,10 +48,11 @@ const compare = (a, b) => {
 }
 
 /**
- * children, rooms, people: rows; visits: every visit that touches the range; absences: those dated in the range.
+ * today: the centre's date (booked dates after it are `upcoming`, not `missing`). children, rooms, people: rows; visits: every
+ * visit that touches the range; absences: those dated in the range.
  * → { json: the attendance shape of docs/API.md, rows: attendance.csv rows, summary: attendance-summary.csv rows }
  */
-export function buildAttendance({ from, to, children, rooms, visits, absences, people }) {
+export function buildAttendance({ from, to, today, children, rooms, visits, absences, people }) {
   const dates = datesBetween(from, to)
   const room = new Map(rooms.map((r) => [r.id, r]))
   const nameOf = new Map(people.map((p) => [p.id, p.name]))
@@ -84,7 +85,7 @@ export function buildAttendance({ from, to, children, rooms, visits, absences, p
       const parts = (partsOf.get(key(ch.id, date)) || []).sort((a, b) => compare([a.start], [b.start]))
       const absence = absenceOf.get(key(ch.id, date)) || null
       const dayMinutes = parts.reduce((sum, p) => sum + p.minutes, 0)
-      const status = parts.length ? 'present' : absence ? 'away' : childBooked(ch, date) ? 'missing' : 'not_booked'
+      const status = parts.length ? 'present' : absence ? 'away' : !childBooked(ch, date) ? 'not_booked' : date > today ? 'upcoming' : 'missing'
       minutes += dayMinutes
       if (status === 'present') present++
       if (status === 'away') {
