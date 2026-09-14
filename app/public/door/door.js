@@ -123,7 +123,8 @@ function drawGrid() {
   const shown = data.children.filter((c) => filter === 'all' || c.room_id === filter)
   const expected = shown.filter((c) => c.status !== 'not_booked')
   const notBooked = shown.filter((c) => c.status === 'not_booked')
-  app.replaceChildren(
+  // An empty section is left out, never passed on: replaceChildren would print it as the text "null".
+  app.replaceChildren(...[
     h('section', { id: 'children', class: 'cards-section', 'aria-label': 'Children' },
       expected.length
         ? h('div', { class: 'cards' }, expected.map((c) => childCard(c, groupOf)))
@@ -132,7 +133,8 @@ function drawGrid() {
       ? h('section', { id: 'not-booked', class: 'cards-section quiet', 'aria-labelledby': 'not-booked-title' },
         h('h2', { id: 'not-booked-title', class: 'section-title' }, 'Not booked today'),
         h('div', { class: 'cards' }, notBooked.map((c) => childCard(c, groupOf))))
-      : null)
+      : null,
+  ].filter(Boolean))
 }
 
 // ---------- the sheet ----------

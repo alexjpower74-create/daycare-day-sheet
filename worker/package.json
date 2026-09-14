@@ -19,6 +19,7 @@
     "negative:ratioedit": "node tests/negative-ratioedit.mjs",
     "negative:ratelimit": "node tests/negative-ratelimit.mjs",
     "negative:openvisit": "node tests/negative-openvisit.mjs",
-    "first-setup": "node tools/first-setup.mjs"
+    "first-setup": "node tools/first-setup.mjs",
+    "negative:followups": "node tests/negative-followups.mjs"
   }
 }
