@@ -19,7 +19,7 @@ export const nl = (hhmm, date = '2026-09-14') => {
 }
 export const T9 = nl('09:00')
 export const SIG = { w: 600, h: 200, strokes: [[40, 150, 120, 60, 200, 140, 280, 50, 360, 150]] }
-export const SIG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 200"><path d="M40 150 L120 60 L200 140 L280 50 L360 150"/></svg>'
+export const SIG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 200"><path d="M40 150 L120 60 L200 140 L280 50 L360 150" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>'
 export const PIN = { dana: '4826', marie: '1593', kevin: '2604', priya: '3715' }
 
 let ipSeq = 0
