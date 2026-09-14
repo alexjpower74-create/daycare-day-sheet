@@ -20,6 +20,7 @@ slice's own tree. Pass/fail comes from each command's own exit code, echoed insi
 | dd1 M4 | `cfbc2aa` | `GET /api/office/follow-ups`; dated door label for a visit left open from an earlier day; two grid bugs the screenshots showed (stray "null", circle-shaped pills) | Worker unit 31 / 0 / 0, API 42 / 0 / 0, setup 1 / 0 / 0, Worker controls 11 of 11 red; door 26 / 0 / 0, door controls 6 of 6 red |
 | dd2 round 4 | `c0785c3` | office + register tap-target sweep (found: tab bar unreachable under the sticky header at 390; WebKit sizing a `<select>` to its longest cited label, 141 px sideways scroll); no centre name before setup (proven red against the old pages in both engines) | web 114 / 0 / 6 skipped; web controls 6 of 6 red |
 | dd1 still here | `2e15ca1` | an open visit dated today is `still_here` (JSON, CSV Note, summary counts earlier dates only); short door pills on one line | Worker unit 32 / 0 / 0, API 43 / 0 / 0, setup 1 / 0 / 0, Worker controls 12 of 12 red; door 28 / 0 / 0, door controls 7 of 7 red |
+| dd1 sample flag | `d6d5dc3` | `/api/info` answers `sample: false` before the centre row exists (no SAMPLE badge on a real deployment before setup) | Worker unit 32 / 0 / 0, empty D1 1 / 0 / 0, API 43 / 0 / 0, setup 1 / 0 / 0, Worker controls 13 of 13 red; door 28 / 0 / 0, door controls 7 of 7 red |
 
 ## Rules check
 
