@@ -2,6 +2,9 @@
    Colours come from theme.css tokens; the ratio colours only through [data-state]. */
 
 body.door { min-height: 100vh; background: var(--ground); }
+/* The hidden attribute must win over display rules (theme.css .sample-badge, .btn-door, .chips), or a hidden badge, Back
+   button or empty chip row stays on screen. */
+.door [hidden] { display: none !important; }
 .door p { margin: 0; }
 .visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .icon { flex: none; }
