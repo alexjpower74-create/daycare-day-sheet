@@ -3,7 +3,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "playwright test"
+    "test": "playwright test",
+    "test:door": "playwright test tests/door",
+    "test:web": "playwright test tests/web",
+    "test:journey": "playwright test tests/journey",
+    "negative:door": "node tests/door/negative-all.mjs",
+    "negative:web": "node tests/web/negative-all.mjs",
+    "negative:journey": "node tests/journey/negative-journey.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0"
