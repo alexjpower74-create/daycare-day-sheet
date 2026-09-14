@@ -28,7 +28,7 @@ async function load() {
 
 function build(note, today, detail) {
   const isToday = note.date === today.date
-  $('#centre-name').textContent = note.centre_name
+  if (note.centre_name) $('#centre-name').textContent = note.centre_name
   document.title = `Daily note: ${note.child.name}`
 
   const noteEl = h('article', { id: 'note', class: 'note' })
@@ -36,11 +36,13 @@ function build(note, today, detail) {
 
   // A line from your educator
   const line = h('textarea', { id: 'note-line', name: 'text', maxlength: '500', rows: '3' }, note.note_line || '')
+  const lineStatus = h('div', { class: 'status-line' })
   const lineSection = h('section', { class: 'panel no-print' },
     h('h2', { class: 'panel-title' }, h('label', { for: 'note-line' }, 'A line from your educator')),
     line,
     h('div', { class: 'btn-row' },
-      h('button', { type: 'button', id: 'save-line', class: 'btn btn-primary', onclick: (e) => saveLine(lineSection, line, e.currentTarget) }, 'Save')))
+      h('button', { type: 'button', id: 'save-line', class: 'btn btn-primary', onclick: (e) => saveLine(lineSection, line, e.currentTarget, lineStatus) }, 'Save')),
+    lineStatus)
 
   // What we did today: the rooms in the note, plus the room the child is in now
   const byName = new Map(today.rooms.map((r) => [r.room.name, r.room]))
@@ -57,24 +59,28 @@ function build(note, today, detail) {
         if (!room) return null
         const text = (note.activities || []).find((a) => a.room_name === room.name)?.text || ''
         const ta = h('textarea', { id: `activity-${rid}`, class: 'activity', 'data-room': rid, name: 'text', maxlength: '500', rows: '2' }, text)
+        const status = h('div', { class: 'status-line' })
         const field = h('div', { class: 'field' },
           h('label', { for: ta.id }, room.name),
           ta,
           h('div', { class: 'btn-row' },
-            h('button', { type: 'button', class: 'btn btn-primary save-activity', 'data-room': rid, onclick: (e) => saveActivity(field, rid, ta, e.currentTarget) }, 'Save')))
+            h('button', { type: 'button', class: 'btn btn-primary save-activity', 'data-room': rid, onclick: (e) => saveActivity(field, rid, ta, e.currentTarget, status) }, 'Save')),
+          status)
         return field
       }))
     : null
 
   // Parent link (today only)
   const linkBox = h('div', { id: 'link-box', class: 'link-box', hidden: true })
+  const linkStatus = h('div', { class: 'status-line' })
   const linkSection = h('section', { class: 'panel no-print' },
     h('h2', { class: 'panel-title' }, 'Parent link'),
     isToday
       ? [
         h('p', { class: 'muted' }, 'Nothing is sent from here. Copy the link and share it the way your centre does, or print the note.'),
         h('div', { class: 'btn-row' },
-          h('button', { type: 'button', id: 'make-link', class: 'btn btn-primary', onclick: (e) => makeLink(linkSection, linkBox, e.currentTarget) }, icon('link'), 'Make parent link')),
+          h('button', { type: 'button', id: 'make-link', class: 'btn btn-primary', onclick: (e) => makeLink(linkSection, linkBox, e.currentTarget, linkStatus) }, icon('link'), 'Make parent link')),
+        linkStatus,
         linkBox,
       ]
       : h('p', { class: 'muted' }, 'Parent links are for today only.'))
@@ -91,36 +97,36 @@ function build(note, today, detail) {
 
 const redrawNote = (note) => { const el = $('#note'); if (el) renderIf(el, note, renderNote) }
 
-async function saveLine(section, textarea, btn) {
+async function saveLine(section, textarea, btn, status) {
   clearErrors(section)
   btn.disabled = true
   try {
     redrawNote(await api.saveLine(childId, textarea.value, date))
-    toast('Saved: A line from your educator')
+    toast('Saved: A line from your educator', { slot: status })
   } catch (e) {
     if (e.status === 401) return reauth()
-    if (!showError(section, e)) toast(e.message, { error: true })
+    if (!showError(section, e)) toast(e.message, { slot: status, error: true })
   } finally {
     btn.disabled = false
   }
 }
 
-async function saveActivity(field, roomId, textarea, btn) {
+async function saveActivity(field, roomId, textarea, btn, status) {
   clearErrors(field)
   btn.disabled = true
   try {
     await api.activity(roomId, textarea.value)
     redrawNote(await api.note(childId, date))
-    toast('Saved: What we did today')
+    toast('Saved: What we did today', { slot: status })
   } catch (e) {
     if (e.status === 401) return reauth()
-    if (!showError(field, e)) toast(e.message, { error: true })
+    if (!showError(field, e)) toast(e.message, { slot: status, error: true })
   } finally {
     btn.disabled = false
   }
 }
 
-async function makeLink(section, box, btn) {
+async function makeLink(section, box, btn, status) {
   btn.disabled = true
   try {
     const r = await api.makeLink(childId)
@@ -132,7 +138,7 @@ async function makeLink(section, box, btn) {
     box.hidden = false
   } catch (e) {
     if (e.status === 401) return reauth()
-    toast(e.message, { error: true })
+    toast(e.message, { slot: status, error: true })
   } finally {
     btn.disabled = false
   }

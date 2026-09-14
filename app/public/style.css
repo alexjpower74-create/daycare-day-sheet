@@ -79,7 +79,7 @@ a { color: var(--accent); }
 .centre-name { overflow-wrap: anywhere; }
 .topbar-meta { color: var(--muted); font-size: 14px; }
 
-.page { max-width: 1120px; margin: 0 auto; padding: 16px 16px 112px; }
+.page { max-width: 1120px; margin: 0 auto; padding: 16px 16px 48px; }
 .section-title { font-size: 15px; font-weight: 700; color: var(--muted); margin: 24px 0 10px; }
 .empty { color: var(--faint); font-size: 15px; }
 .notice {
@@ -141,11 +141,11 @@ textarea:focus, input[type="text"]:focus { border-color: var(--accent); outline:
 }
 .toast-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .toast-error { border-color: var(--danger); }
-.toast-home .toast {
-  position: fixed; z-index: 60; left: 50%; transform: translateX(-50%);
-  bottom: max(16px, env(safe-area-inset-bottom)); width: min(560px, calc(100vw - 32px));
-}
 .toast-inline { width: 100%; box-shadow: none; }
+/* Page messages never float over controls: they go into a reserved line next to what caused them, so nothing covers or shifts. */
+.status-line { display: flex; align-items: center; min-height: 28px; }
+.status-line .toast { min-height: 0; padding: 2px 0; background: none; border: 0; box-shadow: none; color: var(--ok); }
+.status-line .toast-error { color: var(--danger); }
 
 /* ---------- start page ---------- */
 .start-main { max-width: 900px; margin: 0 auto; padding: 48px 16px; }
@@ -320,5 +320,5 @@ html.sheet-open { overflow: hidden; }
   .avatar { background: #fff; color: #000; box-shadow: inset 0 0 0 2px #000; }
   .time, .muted, .faint { color: #333; }
   .staff-note-layout { display: block; }
-  .toast-home, #toast { display: none !important; }
+  .status-line, #toast { display: none !important; }
 }

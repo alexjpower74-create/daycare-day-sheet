@@ -148,8 +148,8 @@ export function poll(fn, ms) {
 
 // ---------- toast ----------
 /**
- * One #toast per page. It lives in a slot: when a sheet is open the slot is a reserved line in the sheet's header (so it can
- * never sit on top of a control); otherwise it is a bar at the bottom of the page.
+ * One #toast per page. It lives in a reserved slot, never floating over the page: the sheet header's status line when a sheet is
+ * open, or a .status-line beside the control that caused it (#toast-home when the caller names none).
  */
 let toastTimer = null
 export function toast(message, { action, onAction, slot, error = false } = {}) {
@@ -159,7 +159,7 @@ export function toast(message, { action, onAction, slot, error = false } = {}) {
   }
   const home = slot || document.getElementById('toast-home') || document.body
   if (t.parentElement !== home) home.append(t)
-  t.classList.toggle('toast-inline', !!slot)
+  t.classList.toggle('toast-inline', !!slot && !slot.classList.contains('status-line'))
   t.classList.toggle('toast-error', error)
   t.replaceChildren(...[
     h('span', { class: 'toast-text' }, message),

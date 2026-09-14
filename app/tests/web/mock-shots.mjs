@@ -4,6 +4,7 @@
 // nothing scrolls sideways at 390, every visible button is at least 44 px, and "Ate all" is not covered right after a toast.
 //   node tests/web/mock-shots.mjs                 all checks + shots into tests/web/shots/
 //   ONLY=chromium-390 node tests/web/mock-shots.mjs   one engine and width
+//   REAL=1 node tests/web/mock-shots.mjs          the same walk against a real Worker on E2E_PORT (TEST_MODE=1), set up through the API, no shots
 //   NEG=overlay node tests/web/mock-shots.mjs     negative control: a transparent layer over "Ate all" must turn the run red
 import { chromium, webkit } from '@playwright/test'
 import { mkdirSync } from 'node:fs'
@@ -13,7 +14,10 @@ import { serve } from './serve.mjs'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const OUT = path.join(HERE, 'shots')
-const PORT = 7801
+const REAL = process.env.REAL === '1'
+const PORT = Number(process.env.E2E_PORT || 7801)
+const NINE = '2026-09-14T11:30:00Z'
+const Q = REAL ? '' : 'mock=1' // query that selects the mock
 const BASE = `http://127.0.0.1:${PORT}`
 const NEG = process.env.NEG || ''
 mkdirSync(OUT, { recursive: true })
@@ -56,7 +60,7 @@ async function typeInto(page, locator, text, label) {
   else await page.keyboard.type(text)
 }
 
-const shot = (page, name) => page.screenshot({ path: path.join(OUT, `${page.__project}-${name}.png`), animations: 'disabled' })
+const shot = (page, name) => REAL ? Promise.resolve() : page.screenshot({ path: path.join(OUT, `${page.__project}-${name}.png`), animations: 'disabled' })
 
 async function waitText(locator, text, label) {
   try {
@@ -82,6 +86,7 @@ async function layoutChecks(page, where) {
 async function run(engine, width) {
   const browser = await engine.launch()
   const context = await browser.newContext({ ...DEVICES[width], baseURL: BASE })
+  if (REAL) { await context.setExtraHTTPHeaders({ 'X-Test-Now': NINE }); await setupReal() }
   if (engine === chromium) await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: BASE })
   const errors = []
   const offenders = []
@@ -91,13 +96,15 @@ async function run(engine, width) {
     p.__width = width
     p.__project = `${engine.name()}-${width}`
     p.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`))
-    p.on('console', (m) => { if (m.type() === 'error' && !/404 \(Not Found\)/.test(m.text())) errors.push(`console: ${m.text()}`) })
+    // The browser logs every non-2xx fetch as "Failed to load resource" (the wrong-PIN 401 is one on purpose); the walk's own checks
+    // catch a real failure, so only script errors and other console errors count here.
+    p.on('console', (m) => { if (m.type() === 'error' && !/^Failed to load resource/.test(m.text())) errors.push(`console: ${m.text()}`) })
   }
   watch(page)
   const project = page.__project
   try {
     // Start page
-    await page.goto('/?mock=1&mockreset=1')
+    await page.goto(REAL ? '/' : '/?mock=1&mockreset=1')
     await waitText(page.locator('#today-line'), 'Monday, September 14', 'start page date from the API')
     await layoutChecks(page, 'start')
     await shot(page, 'start')
@@ -209,7 +216,7 @@ async function run(engine, width) {
     must(await parent.locator('#note [data-section="meals"]').isVisible(), 'print media: sections visible')
     await shot(parent, 'parent-note-print')
     await parent.emulateMedia({ media: 'screen' })
-    await parent.goto('/note/?t=not-a-real-token&mock=1')
+    await parent.goto(`/note/?t=not-a-real-token${REAL ? '' : '&mock=1'}`)
     await waitText(parent.locator('#note-error'), 'We couldn\'t find that note. Ask the centre for a new link.', 'unknown token')
     must(await parent.locator('#note [data-section]').count() === 0, 'no note section on an unknown token')
     await shot(parent, 'parent-note-error')
@@ -227,13 +234,39 @@ async function run(engine, width) {
   }
 }
 
-const server = await serve(PORT)
+// The mock's seeded day, made through the real API (setup only; the walk itself is all taps).
+async function setupReal() {
+  const call = async (method, path, body, token, ip = 'walk-setup') => {
+    const r = await fetch(BASE + path, { method, headers: { 'X-Test-Now': NINE, 'X-Test-IP': ip, 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: body ? JSON.stringify(body) : undefined })
+    const j = await r.json()
+    if (r.status >= 300) throw new CheckFailed(`setup ${method} ${path}: ${r.status} ${JSON.stringify(j)}`)
+    return j
+  }
+  await call('POST', '/api/test/reset')
+  const door = (await call('POST', '/api/door/unlock', { pin: '4826' })).token
+  const sig = { w: 600, h: 200, strokes: [[40, 150, 120, 60, 200, 140, 280, 50]] }
+  for (const c of ['ava', 'liam', 'nora', 'jack', 'emma', 'leo', 'ben', 'lucy', 'sam', 'grace', 'eli', 'zoe', 'max', 'ruby', 'finn']) {
+    await call('POST', `/api/door/children/c_${c}/in`, { person_id: `p_${c}_mother`, signature: sig }, door)
+  }
+  const pins = { r_infant: '1593', r_toddler: '2604', r_preschool: '3715' }
+  let kevin
+  for (const [room, pin] of Object.entries(pins)) {
+    const t = (await call('POST', '/api/signin', { pin })).token
+    await call('POST', '/api/staff/presence', { room_id: room }, t)
+    if (room === 'r_toddler') kevin = t
+  }
+  await call('POST', '/api/staff/children/c_finn/move', { room_id: 'r_preschool' }, kevin)
+  await call('POST', '/api/staff/children/c_ava/logs', { kind: 'meal', value: 'all', meal: 'breakfast' }, kevin)
+  await call('POST', '/api/staff/children/c_liam/logs', { kind: 'nap_start' }, kevin)
+}
+
+const server = REAL ? null : await serve(PORT)
 const results = []
 const ONLY = process.env.ONLY || '' // e.g. ONLY=chromium-390
 for (const [engine, width] of [[chromium, 390], [chromium, 1280], [webkit, 390], [webkit, 1280]]) {
   if (!ONLY || ONLY === `${engine.name()}-${width}`) results.push(await run(engine, width))
 }
-server.close()
+server?.close()
 const allPass = results.every(Boolean)
 if (NEG) {
   console.log(allPass ? `NEGATIVE CONTROL ${NEG}: still green, the check measured nothing` : `NEGATIVE CONTROL ${NEG}: red as it should be`)

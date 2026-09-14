@@ -34,7 +34,7 @@
   <script type="module">
     import { api } from '/api.js'
     api.info().then((i) => {
-      document.getElementById('centre-name').textContent = i.centre_name
+      if (i.centre_name) document.getElementById('centre-name').textContent = i.centre_name
       document.getElementById('today-line').textContent = i.long_label
     }).catch(() => {})
   </script>

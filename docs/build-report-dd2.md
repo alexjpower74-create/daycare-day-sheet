@@ -50,8 +50,8 @@ Parent note: `#note` with `[data-section=meals|sleep|toileting|mood|activities|s
    - An open sheet is never touched by a poll, only by the person's own write in it.
    - The sheet shows no controls until the child's data has loaded.
    - "Daily note" sits **above** Today, not below it as Design lists them. Today grows with every log, so a link under it would slide down. On a fast tap after a log it would land on an "Undo".
-2. **The toast never covers a control in a sheet.** Inside a sheet, `#toast` goes into a reserved line in the sheet header, where the arrival line normally sits, so it takes no space of its own. Nothing shifts when it appears. The header carries `data-sticky-header`, so `tap()` accounts for it. On the page, the toast is a bar at the bottom and the page has 112 px of bottom padding. Opening a sheet hides a page toast (see bug 1 below).
-3. **`in_label` / `since_label`.** API.md does not say whether `rooms[].children[].in_label` is `"8:05 AM"` or `"In since 8:05 AM"`. The page prefixes "In since " only when the label starts with a digit, so either works. Same for `since_label` with "Since ". Please pin this in API.md.
+2. **(Superseded in the cross-review: page messages no longer float at all, see "Fixed on my side" 3.)** **The toast never covers a control in a sheet.** Inside a sheet, `#toast` goes into a reserved line in the sheet header, where the arrival line normally sits, so it takes no space of its own. Nothing shifts when it appears. The header carries `data-sticky-header`, so `tap()` accounts for it. On the page, the toast is a bar at the bottom and the page has 112 px of bottom padding. Opening a sheet hides a page toast (see bug 1 below).
+3. **(Superseded: the lead confirmed bare times, and the guess is removed.)** **`in_label` / `since_label`.** API.md does not say whether `rooms[].children[].in_label` is `"8:05 AM"` or `"In since 8:05 AM"`. The page prefixes "In since " only when the label starts with a digit, so either works. Same for `since_label` with "Since ". Please pin this in API.md.
 4. **Activity rooms on the staff note.** The **note** has `activities[].room_name` but no room id, and `PUT /api/staff/rooms/:id/activity` needs one. The page maps names to ids through `GET /api/staff/today` rooms and always adds the child's current room, so a room can be filled in before it has any text. If the Worker leaves rooms with empty text out of `activities`, this still works.
 5. **Napping** in the sheet comes from `GET /api/staff/today` (`napping`). It falls back to the order of the nap logs when the child is not in today's rooms.
 6. **Keypad for the door (dd1):** `/keypad.js` is importable read-only (usage in its header comment). Whether the door uses it or builds its own is dd1's call; nothing in my pages depends on that.
@@ -108,3 +108,57 @@ Bugs the check found before commit, each fixed and re-run green:
 
 - **dd1:** the Worker, to rebase onto for M2. Please confirm the `in_label` / `since_label` format (decision 3), and whether `note.activities` includes placed rooms with empty text (decision 4).
 - **Lead:** the mock path (Deviations), and whether you want `tests/web/mock-shots.mjs` kept after M2 or deleted.
+
+## Cross-review of dd1 M1 (2026-09-14)
+
+Done against `main` at 2d5305d merged into `rig/dd2`. dd1's Worker ran from this worktree on 7801 (`--persist-to .state-7801 --var TEST_MODE:1`). I read nothing in `worker/` beyond one grep to confirm a finding, and edited nothing there.
+
+**Two passes:**
+1. **Routes:** `node tests/web/cross-review-dd1-m1.mjs`, 237 checks. It calls every route dd2's pages use and compares shapes (key sets), labels, error `status`/`code`/`field`/text and the error envelope against docs/API.md. Routes: info, signin, signout, staff/today, presence, staff child, every log kind, undo, move, staff-recorded in, room activity, note GET/PUT, note link, parent note, plus the 429 guard.
+2. **Pages:** `REAL=1 E2E_PORT=7801 node tests/web/mock-shots.mjs`. The M1 page walk with no `?mock`, with the day set up through the API and every step done with real taps. Chromium and WebKit at 390 and 1280.
+
+**The probe can fail.** Its first run went red with 10 DIFFs. All 10 were my own wrong expectations, not Worker bugs:
+- I expected a meal the probe had itself undone.
+- I made a parent link with a 9:00 AM token at 9:00 PM, which is a correct 401 under the 12-hour rule, and three link checks failed after it.
+
+I fixed the probe and it now holds those two points explicitly ("staff token after 12 hours → 401").
+
+### Findings about the Worker (report only; for dd1)
+
+| # | what | where | expected (API.md) | got |
+|---|---|---|---|---|
+| W1 | `signature_svg` has no stroke attributes | `worker/src/signature.js:45`; seen in `GET /api/staff/children/c_ava` `visit.in_signature_svg` after a door sign-in | `<path d="…" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>` (the lead changed API.md in ebd70fa, after dd1's M1) | `<path d="M40 150 L120 60 L200 140 L280 50 L360 150"/>`, which fills black with no page CSS. Blocks my M3 register only if not fixed by then. |
+| W2 | Before `POST /api/test/reset`, a migrated but empty D1 answers `GET /api/info` with `centre_name: ""` and `phone: ""` | `/api/info` on a fresh `.state-7801` | Not defined in API.md; a real centre gets its row from `first-setup.mjs` | Not a contract break. My pages were overwriting the SAMPLE name with `""`, which I fixed on my side (below). Lead: perhaps say in API.md what `/api/info` answers before setup. |
+
+Everything else matched API.md exactly, 236 of 237 checks:
+- **Shapes:** Child, Meter, Visit, Log, Note, today, presence, move, staff in, link.
+- **Labels:** all 16 log labels; the at_limit and over labels; "Needs 1 more staff."; the move message; the nap "12:40 PM to 2:05 PM (1 h 25 min)".
+- **Bare times:** `in_label`, `since_label`, `time_label`.
+- **`activities`:** only rooms with a line.
+- **`infant_record`:** true for Ava, false for Ben.
+- **Parent link:** 43 base64url chars; 200 at 11:59:59 PM NDT; 410 with the exact text at 12:00 AM; the exact 404 text.
+- **No phones:** none in staff people or in the parent note.
+- **Status and error codes:**
+  - sign-in and tokens: 401 `field: "pin"`; 429 with the exact text; a door token on a staff route → 403; a signed-out token → 401
+  - presence: an educator moving someone else → 403
+  - logs: `bad_request` with `value` / `meal` / `text`; `already_napping` and `not_napping`; `not_in`
+  - undo: another educator's log → 403, the supervisor's → 200
+  - move: same room → 400 `room_id`
+  - staff-recorded drop-off: `already_in`; `not_on_list` with the exact text; `in_recorded_by {id, initials}`, `awaiting_signature: "in"`
+  - activity or note over 500 characters → 400 `text`
+- **Assets:** every page and script is served at 200 through the Worker.
+
+Behaviour worth knowing for M2 (not a finding): a staff token dies 12 hours after sign-in. So any M2 step that moves the clock past that (for example `setNow` to 11:59 PM on a staff page) has to sign in again. The parent page needs no token.
+
+### Fixed on my side — DONE
+
+1. **Time labels** (lead's answer 1): `room.js` now always adds "In since " / "Since ". The guess that worked both ways is gone.
+2. **Empty centre name** (W2): the start page, room view, staff note and parent note keep the SAMPLE name unless the API sends a non-empty one.
+3. **A toast covered "Make parent link" at 1280 on the real Worker** (the real note is longer than the mock's). The floating page toast is gone. Every page message now goes into a reserved `.status-line` next to the control that caused it:
+   - on the room view, `#toast-home` under the room strip
+   - on the staff note, a status line in each panel
+
+   Sheets keep their reserved header slot. Nothing floats over a control and nothing shifts when a message appears. Found by the real-Worker walk: `FAIL chromium-1280: tap(Make parent link): something else is on top: <span class="toast-text">Saved: A line from your educator</span>`, and the same in webkit-1280. Re-run green in all four.
+4. **The walk's console filter** now ignores the browser's "Failed to load resource" lines, since the wrong-PIN step causes a 401 on purpose. A real failure still fails the walk's own checks.
+
+After the fixes, the walk against the real Worker passes in chromium-390, chromium-1280, webkit-390 and webkit-1280, and the mock walk passes all four too.
