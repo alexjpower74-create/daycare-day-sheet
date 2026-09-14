@@ -351,3 +351,44 @@ After the fixes, the office and register sweeps pass in chromium-390, chromium-1
 - **The aurora in `theme.css`:** it was not the cause of the sideways scroll (the probe cleared that), so nothing is needed there.
 
 Every server I started is stopped: 7801, 7803 and their inspector ports are free, and the before-setup D1 state is removed.
+
+## Next round (2026-09-14)
+
+I merged `main` first (fc8f63f: `sample` is `false` before the centre row exists; my pages already follow the flag). I merged again after "Merge dd1 M4" (89d8666) landed.
+
+### 1. No browser dialog on the register — DONE (5048408)
+
+`register.js` never called `window.alert`. Its two problem paths (plus the load error) went through a local helper **named** `alert`, which wrote an on-page message. The name shadowed `window.alert` and read like a browser dialog, and no test held the behaviour.
+- **Change:** the helper is now `showProblem()`, writing `#register-error` with `role="alert"`.
+- **Specs:** `register.spec` has two new tests, each failing if any browser dialog opens:
+  - with no room → the on-page message
+  - with an unknown room (`r_nowhere`) → the load error, which is the API's own error text
+  - with an educator's token → "Only the supervisor can open the office."
+- **Proof:** a copy whose `showProblem` calls `window.alert` goes red in chromium-390 and webkit-390 (`#register-error`: element not found). With the fix, register.spec is 12 of 12. A grep finds no `alert(`, `confirm(` or `prompt(` call in `app/public`.
+
+### 2. Today follow-ups from `GET /api/office/follow-ups` — DONE (c65f96c)
+
+- **Lists:** "Signature needed" lists `pending_signatures` (the last 14 days, whether or not the child is here). "Not signed out" lists `not_signed_out` (visits left open from earlier days). Dates are the API's `date_label` ("Thu Sep 10") and times its labels; no ISO date is shown.
+- **Fix a time:** each not-signed-out row has "Fix a time", which opens a small dialog (`attendance.js` `openFixVisit`: sign-out date and time, and why). It calls `PUT /api/office/visits/:id`, then re-reads Today, so the fixed visit leaves the list.
+- **Spec** (`office.spec`, "Today follows up from the API…"), set up through the API:
+  - Ava signed in on Thu Sep 10 and never signed out.
+  - On Fri Sep 11 Marie records Liam's drop-off without a signature, and he goes home at 4:00 PM, so he is not in the building on Mon Sep 14 (asserted).
+  - On the page: Liam is listed with "Drop-off Fri Sep 11, 8:00 AM"; Ava shows "Thu Sep 10, in at 9:00 AM"; the Today panel's text has no `YYYY-MM-DD`.
+  - "Fix a time" with 5:00 PM and a reason removes Ava's row and says "Time fixed.". The API then has no `not_signed_out`, and Liam's signature is still pending.
+- **Proof:** with HEAD's Today (built from attendance and today's rooms), the test goes red in chromium-390 and webkit-1280: `a pending signature for a child who went home … element(s) not found`. With the fix, office.spec is 24 of 24.
+
+### 3. Still here — DONE (this commit)
+
+"Merge dd1 still here" (005f605) landed as I committed item 2, so I merged `main` again and built it in this round. The WAITING note I wrote first is replaced here.
+- **Attendance:** a day with `still_here: true` (an open visit dated today) shows a green "Still here" chip, with no "Not signed out" flag and no "Fix a time". An open visit from an earlier day keeps the flag and "Fix a time". The table footnote says so.
+- **Register:** `/api/office/register` has no `still_here` field, so the page compares the register's `date` with `/api/info` `today`. A visit with no `out_at` reads "Still here" on today's register and "Not signed out" on an earlier date's (API.md).
+- **Specs:**
+  - `attendance.spec`: Emma is signed in at 8:30 AM today, Wed Sep 16. The API has `still_here: true`; her cell reads exactly "Still here" with no `.fix-time`. Nora's open visit from Tue Sep 15 still reads "Not signed out" with one "Fix a time".
+  - `register.spec`: Liam, open today, reads "Still here" on the Sep 14 register. Owen, open since Fri Sep 11, reads "Not signed out" on the Sep 11 register.
+- **Negative control (g)** `negative-still-here.mjs`: the copy's attendance page ignores `still_here` (`if (false)`) and flags today's open visit. Red as intended: `Error: today's open visit reads Still here · Expected: "Still here" · Received: "Not signed outFix a time"`. `negative-all.mjs` now runs (a)–(g).
+- **Register proof:** with HEAD's `register.js`, the register test goes red in chromium-390 and webkit-1280: `today: open visit reads Still here · Expected: "Still here" · Received: "Not signed out"`. With the change, attendance.spec plus register.spec are 36 of 36.
+- **Knock-on in the office tap-target sweep:** its last step opened "Fix a time" from the first one in the demo day's current week. Those were today's open visits, which now correctly have no Fix a time, so all four projects failed with `element(s) not found` in the first full run. The sweep now goes to the previous week and opens the dialog from a past visit that can be fixed.
+
+### Suite
+
+After item 2: **126 passed, 6 skipped, 0 failed**. After item 3: **134 passed, 6 skipped, 0 failed** in chromium and webkit at 390 and 1280. The skips are the same deliberate ones as last round. Negative controls (a)–(g): 7 of 7 red as intended. Every server I started is stopped.

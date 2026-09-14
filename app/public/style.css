@@ -53,6 +53,7 @@ a { color: var(--accent); }
 .chip-asleep { color: #c7d2fe; border-color: rgba(129, 140, 248, 0.55); background: rgba(129, 140, 248, 0.14); }
 .chip-sign { color: var(--needs-signature); border-color: color-mix(in srgb, var(--needs-signature) 55%, transparent); }
 .chip-away { color: var(--status-away); border-color: color-mix(in srgb, var(--status-away) 55%, transparent); }
+.chip-here { color: var(--status-in); border-color: color-mix(in srgb, var(--status-in) 55%, transparent); }
 .chips-inline { display: flex; flex-wrap: wrap; gap: 6px; }
 
 .avatar {

@@ -178,6 +178,9 @@ test('the office: every tab, and every visible button on it and in its dialogs, 
   await checkTargets(page, page.locator('#away-dialog'), 'Mark away dialog')
   await tap(page, page.locator('#away-dialog').getByRole('button', { name: 'Cancel' }), 'Cancel Mark away')
   await expect(page.locator('#away-dialog')).toHaveCount(0)
+  // Today's open visits are Still here and have no Fix a time, so open the dialog from last week's visits.
+  await tap(page, page.locator('#att-prev'), 'Previous week')
+  await expect(page.locator('[data-cell] .fix-time').first()).toBeVisible()
   await tap(page, page.locator('[data-cell] .fix-time').first(), 'a Fix a time button')
   await expect(page.locator('#fix-dialog')).toBeVisible()
   await checkTargets(page, page.locator('#fix-dialog'), 'Fix a time dialog')
