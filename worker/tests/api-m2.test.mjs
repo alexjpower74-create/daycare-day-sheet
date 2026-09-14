@@ -366,7 +366,7 @@ test('attendance: open visits are present with 0 minutes and Not signed out, in 
   assert.equal(summary.at(-1)[11], '1')
 })
 
-test('attendance: missing, not booked and away are told apart, and a child who starts later is not booked before then', async () => {
+test('attendance: missing, upcoming, not booked and away are told apart, and a child who starts later is not booked before then', async () => {
   const now = nl('17:00')
   const dana = await sup(now)
   await call('POST', '/api/office/absences', { token: dana, now, body: { child_id: 'c_liam', date: '2026-09-15', reason: 'sick', note: 'Fever.' } })
@@ -374,13 +374,18 @@ test('attendance: missing, not booked and away are told apart, and a child who s
   const a = await call('GET', '/api/office/attendance?from=2026-09-14&to=2026-09-20', { token: dana, now })
   const kid = (id) => a.body.children.find((c) => c.id === id)
   const statuses = (id) => a.body.dates.map((d) => kid(id).days[d].status)
-  assert.deepEqual(statuses('c_liam'), ['missing', 'away', 'missing', 'missing', 'missing', 'not_booked', 'not_booked'])
+  assert.deepEqual(statuses('c_liam'), ['missing', 'away', 'upcoming', 'upcoming', 'upcoming', 'not_booked', 'not_booked'])
   assert.deepEqual(kid('c_liam').days['2026-09-15'].absence, { id: kid('c_liam').days['2026-09-15'].absence.id, child_id: 'c_liam', date: '2026-09-15',
     reason: 'sick', reason_label: 'Sick', note: 'Fever.' })
   assert.deepEqual([kid('c_liam').days_away, kid('c_liam').away_by_reason], [1, { sick: 1, holiday: 0, appointment: 0, family: 0, other: 0 }])
-  assert.deepEqual(statuses('c_isla'), ['not_booked', 'missing', 'not_booked', 'missing', 'not_booked', 'not_booked', 'not_booked'])
-  assert.deepEqual(statuses('c_owen'), ['missing', 'not_booked', 'missing', 'not_booked', 'missing', 'not_booked', 'not_booked'])
-  assert.deepEqual(statuses(nell.body.child.id), ['not_booked', 'not_booked', 'missing', 'not_booked', 'not_booked', 'not_booked', 'not_booked'])
+  assert.deepEqual(statuses('c_isla'), ['not_booked', 'upcoming', 'not_booked', 'upcoming', 'not_booked', 'not_booked', 'not_booked'])
+  assert.deepEqual(statuses('c_owen'), ['missing', 'not_booked', 'upcoming', 'not_booked', 'upcoming', 'not_booked', 'not_booked'])
+  assert.deepEqual(statuses(nell.body.child.id), ['not_booked', 'not_booked', 'upcoming', 'not_booked', 'not_booked', 'not_booked', 'not_booked'])
+  // Seen on Thursday Sep 17, Wednesday has passed: Liam's Sep 16 and 17 are missing, Sep 18 is still upcoming.
+  const thu = nl('17:00', '2026-09-17')
+  const later = await call('GET', '/api/office/attendance?from=2026-09-14&to=2026-09-20', { token: await sup(thu), now: thu })
+  assert.deepEqual(later.body.dates.map((d) => later.body.children.find((c) => c.id === 'c_liam').days[d].status),
+    ['missing', 'away', 'missing', 'missing', 'upcoming', 'not_booked', 'not_booked'])
   const csv = await call('GET', '/api/office/attendance.csv?from=2026-09-14&to=2026-09-20', { token: dana, now })
   assert.ok(csv.body.split('\r\n').includes('2026-09-15,Liam K. (SAMPLE),Infant room,,,,,0,0.00,Sick,Fever.'), csv.body)
   const summary = parseCsv((await call('GET', '/api/office/attendance-summary.csv?from=2026-09-14&to=2026-09-20', { token: dana, now })).body)
@@ -534,7 +539,7 @@ test('register: rows for one homeroom with dob, emergency contact, both signatur
 
 // ---------- the demo seed ----------
 
-test('demo seed: 15 weekdays of attendance with absences, one open visit and a signature waiting; today at the limit, ok and over; a live note link', async () => {
+test('demo seed: 15 weekdays of attendance with absences, one open visit and a signature waiting; today infant at the limit, toddler over, preschool ok; a live note link', async () => {
   const now = nl('10:00')
   const bad = await call('POST', '/api/test/seed', { body: { scenario: 'party' }, now })
   refused(bad, 'scenario')
@@ -558,8 +563,10 @@ test('demo seed: 15 weekdays of attendance with absences, one open visit and a s
   const today = await call('GET', '/api/staff/today', { token: await staffToken(PIN.marie, now), now })
   const meters = Object.fromEntries(today.body.rooms.map((r) => [r.room.id, r.meter]))
   assert.deepEqual([meters.r_infant.state, meters.r_infant.children, meters.r_infant.staff], ['at_limit', 3, 1])
-  assert.deepEqual([meters.r_toddler.state, meters.r_toddler.children, meters.r_toddler.staff], ['ok', 4, 1])
-  assert.deepEqual([meters.r_preschool.state, meters.r_preschool.children, meters.r_preschool.needs_staff], ['over', 9, 1])
+  assert.deepEqual([meters.r_toddler.state, meters.r_toddler.children, meters.r_toddler.staff, meters.r_toddler.needs_staff], ['over', 6, 1, 1])
+  assert.deepEqual([meters.r_preschool.state, meters.r_preschool.children, meters.r_preschool.staff], ['ok', 6, 1])
+  const toddlers = today.body.rooms.find((r) => r.room.id === 'r_toddler').children.map((c) => c.id).sort()
+  assert.deepEqual(toddlers, ['c_chloe', 'c_emma', 'c_finn', 'c_jack', 'c_leo', 'c_maya'], 'all six toddlers, nobody moved out of their room')
   const door = await doorToken(now)
   const list = (await call('GET', '/api/door/children', { token: door, now })).body.children
   assert.ok(list.some((c) => c.awaiting_signature), 'a staff-recorded drop-off is waiting for a signature')
@@ -568,5 +575,5 @@ test('demo seed: 15 weekdays of attendance with absences, one open visit and a s
   assert.equal(note.status, 200)
   assert.equal(note.body.child.name, 'Ava M. (SAMPLE)')
   assert.ok(note.body.meals.length && note.body.toileting.length && note.body.activities.length)
-  assert.equal((await call('GET', '/api/office/attendance?from=2026-09-14&to=2026-09-14', { token: dana, now })).body.totals.child_days, 16)
+  assert.equal((await call('GET', '/api/office/attendance?from=2026-09-14&to=2026-09-14', { token: dana, now })).body.totals.child_days, 15)
 })

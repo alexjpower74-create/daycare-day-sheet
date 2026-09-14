@@ -53,8 +53,8 @@ function generator(text) {
 /**
  * Reset, then around today: the last 15 weekdays of attendance for every booked child (arrivals 7:30–9:15 AM, pickups
  * 3:45–5:30 PM, scribble signatures), 4 absences with different reasons, one visit last week never signed out, one staff-recorded
- * drop-off awaiting a signature; today by 9:00 AM the infant room at the limit, the toddler room ok and the preschool room over,
- * with logs and a line per room. → { today, note_url } (a parent link for Ava today).
+ * drop-off awaiting a signature; today by 9:00 AM the infant room at the limit (3), the toddler room over (all 6) and the preschool
+ * room ok (6), nobody moved out of their own room, with logs and a line per room. → { today, note_url } (a parent link for Ava today).
  */
 export async function seedDemo(c) {
   const db = c.db
@@ -94,7 +94,8 @@ export async function seedDemo(c) {
     [`c_liam|${days[2]}`, ['sick', 'Fever at home.']], [`c_emma|${days[5]}`, ['holiday', 'Family trip.']],
     [`c_sam|${days[8]}`, ['appointment', 'Dentist in the morning.']], [`c_zoe|${days[12]}`, ['family', '']],
   ])
-  const neverSignedOut = `c_finn|${days[9]}`
+  // Ruby is not signed in today, so her open visit from last week cannot block a sign-in.
+  const neverSignedOut = `c_ruby|${days[9]}`
   const recordedDropOff = `c_leo|${days[14]}`
   for (const date of days) {
     for (const ch of children) {
@@ -127,8 +128,7 @@ export async function seedDemo(c) {
       .bind(randomId('pr'), staffId, room, T(450)))
   }
   const arrivals = [['c_ava', 460], ['c_liam', 465], ['c_nora', 470], ['c_jack', 472], ['c_emma', 475], ['c_leo', 480], ['c_chloe', 485],
-    ['c_maya', 488], ['c_ben', 490], ['c_lucy', 492], ['c_sam', 495], ['c_grace', 498], ['c_eli', 500], ['c_zoe', 502], ['c_max', 505],
-    ['c_ruby', 508]]
+    ['c_finn', 487], ['c_maya', 488], ['c_ben', 490], ['c_lucy', 492], ['c_sam', 495], ['c_grace', 498], ['c_eli', 500], ['c_zoe', 502]]
   const todayVisit = {}
   for (const [child, minutes] of arrivals) {
     const ch = children.find((x) => x.id === child)
@@ -137,16 +137,7 @@ export async function seedDemo(c) {
     const id = visit({ child, date: today, inAt, outAt: null, inBy: mother })
     todayVisit[child] = { id, inAt, room: ch.home_room_id }
   }
-  // Maya (2 years 9 months) joins the preschool room at 8:30: the toddler room keeps 4, the preschool room has 9.
-  const moveAt = T(510)
-  for (const [child, v] of Object.entries(todayVisit)) {
-    if (child === 'c_maya') {
-      place(v.id, child, 'r_toddler', v.inAt, moveAt)
-      place(v.id, child, 'r_preschool', moveAt, null)
-    } else {
-      place(v.id, child, v.room, v.inAt, null)
-    }
-  }
+  for (const [child, v] of Object.entries(todayVisit)) place(v.id, child, v.room, v.inAt, null)
   const logs = [
     ['c_ava', 's_marie', 515, 'meal', 'all', 'breakfast', null], ['c_liam', 's_marie', 518, 'meal', 'some', 'breakfast', null],
     ['c_ava', 's_marie', 520, 'diaper', 'wet', null, null], ['c_jack', 's_kevin', 522, 'meal', 'all', 'breakfast', null],

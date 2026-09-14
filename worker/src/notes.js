@@ -61,7 +61,8 @@ export function logView(log, staff) {
 
 /**
  * The daily note. visits: that child's visits of the date (in time order); logs: not voided, in time order;
- * activities: [{ room_name, text, updated_at }] for the rooms the child was placed in that day, first placement first.
+ * activities: [{ room_id, room_name, text, updated_at }] for every room the child was placed in that day, first placement first
+ * (rooms_today lists them all; the note's activities keep only the ones with a line).
  */
 export function buildNote({ centre, child, room, date, visits, logs, activities, noteLine, people, staff, now }) {
   const nameOf = (id) => people.get(id)?.name ?? ''
@@ -96,7 +97,8 @@ export function buildNote({ centre, child, room, date, visits, logs, activities,
     toileting: logs.filter((l) => l.kind === 'diaper' || l.kind === 'toilet')
       .map((l) => ({ label: logLabel(l), time_label: timeLabel(l.at) })),
     moods: logs.filter((l) => l.kind === 'mood').map((l) => ({ label: logLabel(l), time_label: timeLabel(l.at) })),
-    activities: shown.map((a) => ({ room_name: a.room_name, text: a.text })),
+    activities: shown.map((a) => ({ room_id: a.room_id, room_name: a.room_name, text: a.text })),
+    rooms_today: activities.map((a) => ({ room_id: a.room_id, room_name: a.room_name })),
     staff_notes: logs.filter((l) => l.kind === 'note')
       .map((l) => ({ text: l.text, time_label: timeLabel(l.at), by_initials: staff.get(l.by_staff_id)?.initials ?? '' })),
     note_line: line,

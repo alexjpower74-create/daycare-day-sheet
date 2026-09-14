@@ -16,7 +16,7 @@ test('across midnight: 10:30 PM Sep 14 to 1:15 AM Sep 15 is 90 + 75 minutes', ()
   const parts = splitVisit(visit('v1', 'c1', at('2026-09-14', 22, 30), at('2026-09-15', 1, 15)))
   assert.deepEqual(parts.map((p) => [p.date, p.minutes, p.continues, p.continued]), [['2026-09-14', 90, true, false], ['2026-09-15', 75, false, true]])
   assert.equal(parts[0].end, '2026-09-15T02:30:00.000Z')
-  const a = buildAttendance({ from: '2026-09-14', to: '2026-09-15', children: [kid('c1')], rooms: ROOMS, people: PEOPLE, absences: [],
+  const a = buildAttendance({ from: '2026-09-14', to: '2026-09-15', today: '2026-09-15', children: [kid('c1')], rooms: ROOMS, people: PEOPLE, absences: [],
     visits: [visit('v1', 'c1', at('2026-09-14', 22, 30), at('2026-09-15', 1, 15))] })
   assert.deepEqual(a.rows, [
     ['2026-09-14', 'c1 (SAMPLE)', 'A room', '10:30 PM', 'In P. (SAMPLE)', '1:15 AM Sep 15', 'Out P. (SAMPLE)', 90, '1.50', '', 'Continues past midnight'],
@@ -39,7 +39,7 @@ test('a visit over two midnights has a middle part that continues and is continu
 })
 
 test('open visit: present, 0 minutes, one part on its sign-in date, "Not signed out"', () => {
-  const a = buildAttendance({ from: '2026-09-11', to: '2026-09-14', children: [kid('c1')], rooms: ROOMS, people: PEOPLE, absences: [],
+  const a = buildAttendance({ from: '2026-09-11', to: '2026-09-14', today: '2026-09-14', children: [kid('c1')], rooms: ROOMS, people: PEOPLE, absences: [],
     visits: [visit('v1', 'c1', at('2026-09-11', 9), null)] })
   const c = a.json.children[0]
   assert.deepEqual(c.days['2026-09-11'], { status: 'present', minutes: 0, open: true, absence: null,
@@ -50,17 +50,19 @@ test('open visit: present, 0 minutes, one part on its sign-in date, "Not signed 
   assert.deepEqual(a.summary.at(-1), ['Total', '', 1, 0, '0.00', 0, 0, 0, 0, 0, 0, 1])
 })
 
-test('missing, not booked, away, not yet registered, and absence rows', () => {
-  const a = buildAttendance({ from: '2026-09-14', to: '2026-09-16', rooms: ROOMS, people: PEOPLE, visits: [],
+test('missing (today or before), upcoming (after today), not booked, away, not yet registered, and absence rows', () => {
+  const a = buildAttendance({ from: '2026-09-14', to: '2026-09-16', today: '2026-09-15', rooms: ROOMS, people: PEOPLE, visits: [],
     children: [kid('c1'), kid('c2', { days: '["tue"]' }), kid('c3', { start_date: '2026-09-16', days: '["wed"]' }), kid('c4', { end_date: '2026-09-01' })],
     absences: [{ id: 'a1', child_id: 'c1', date: '2026-09-15', reason: 'sick', note: 'Fever.' }] })
   assert.deepEqual(a.json.children.map((c) => c.id), ['c1', 'c2', 'c3'], 'c4 ended before the range')
   const [c1, c2, c3] = a.json.children
-  assert.deepEqual(Object.values(c1.days).map((d) => d.status), ['missing', 'away', 'missing'])
+  assert.deepEqual(Object.values(c1.days).map((d) => d.status), ['missing', 'away', 'upcoming'])
   assert.deepEqual(c1.days['2026-09-15'].absence, { id: 'a1', child_id: 'c1', date: '2026-09-15', reason: 'sick', reason_label: 'Sick', note: 'Fever.' })
   assert.deepEqual([c1.days_away, c1.away_by_reason], [1, { sick: 1, holiday: 0, appointment: 0, family: 0, other: 0 }])
   assert.deepEqual(Object.values(c2.days).map((d) => d.status), ['not_booked', 'missing', 'not_booked'])
-  assert.deepEqual(Object.values(c3.days).map((d) => d.status), ['not_booked', 'not_booked', 'missing'])
+  assert.deepEqual(Object.values(c3.days).map((d) => d.status), ['not_booked', 'not_booked', 'upcoming'])
+  const later = buildAttendance({ from: '2026-09-14', to: '2026-09-16', today: '2026-09-16', rooms: ROOMS, people: PEOPLE, visits: [], absences: [], children: [kid('c1')] })
+  assert.deepEqual(Object.values(later.json.children[0].days).map((d) => d.status), ['missing', 'missing', 'missing'], 'today itself is missing, not upcoming')
   assert.deepEqual(a.rows, [['2026-09-15', 'c1 (SAMPLE)', 'A room', '', '', '', '', 0, '0.00', 'Sick', 'Fever.']])
 })
 
@@ -79,7 +81,7 @@ test('property: 300 seeded visits (1 minute to 30 hours, across midnights and bo
     visits.push(visit(`v${i}`, children[i % 5].id, new Date(start).toISOString(), new Date(end).toISOString()))
   }
   const dates = visits.flatMap((v) => [localDate(v.in_at), localDate(v.out_at)]).sort()
-  const a = buildAttendance({ from: dates[0], to: dates.at(-1), children, rooms: ROOMS, people: PEOPLE, absences: [], visits })
+  const a = buildAttendance({ from: dates[0], to: dates.at(-1), today: dates.at(-1), children, rooms: ROOMS, people: PEOPLE, absences: [], visits })
   let crossed = 0
   for (const c of a.json.children) {
     const whole = visits.filter((v) => v.child_id === c.id).reduce((s, v) => s + minutesBetween(v.in_at, v.out_at), 0)

@@ -465,6 +465,10 @@ test('the note: meals, a nap, toileting, moods, both rooms\' activities after a 
   assert.equal((await call('POST', '/api/staff/children/c_ava/move', { token: kevin, body: { room_id: 'r_toddler' }, now: nl('14:10') })).status, 200)
   const act = await call('PUT', '/api/staff/rooms/r_infant/activity', { token: marie, body: { text: 'Sensory bins and a walk to the harbour.' }, now: nl('14:20') })
   assert.deepEqual(act.body, { date: '2026-09-14', room_id: 'r_infant', text: 'Sensory bins and a walk to the harbour.' })
+  // Only the infant room has a line yet: activities lists it, rooms_today lists both rooms Ava was in.
+  const half = await call('GET', '/api/staff/children/c_ava/note', { token: marie, now: nl('14:21') })
+  assert.deepEqual(half.body.activities, [{ room_id: 'r_infant', room_name: 'Infant room', text: 'Sensory bins and a walk to the harbour.' }])
+  assert.deepEqual(half.body.rooms_today, [{ room_id: 'r_infant', room_name: 'Infant room' }, { room_id: 'r_toddler', room_name: 'Toddler room' }])
   await call('PUT', '/api/staff/rooms/r_toddler/activity', { token: kevin, body: { text: 'Painting with big brushes.' }, now: nl('14:25') })
   await call('PUT', '/api/staff/rooms/r_preschool/activity', { token: kevin, body: { text: 'Not Ava\'s room today.' }, now: nl('14:25') })
   const line = await call('PUT', '/api/staff/children/c_ava/note', { token: marie, body: { text: 'A great day.' }, now: nl('14:30') })
@@ -483,22 +487,25 @@ test('the note: meals, a nap, toileting, moods, both rooms\' activities after a 
     naps: [{ label: '12:40 PM to 2:05 PM (1 h 25 min)', minutes: 85 }],
     toileting: [{ label: 'Wet diaper', time_label: '10:10 AM' }],
     moods: [{ label: 'Happy', time_label: '9:30 AM' }],
-    activities: [{ room_name: 'Infant room', text: 'Sensory bins and a walk to the harbour.' },
-      { room_name: 'Toddler room', text: 'Painting with big brushes.' }],
+    activities: [{ room_id: 'r_infant', room_name: 'Infant room', text: 'Sensory bins and a walk to the harbour.' },
+      { room_id: 'r_toddler', room_name: 'Toddler room', text: 'Painting with big brushes.' }],
+    rooms_today: [{ room_id: 'r_infant', room_name: 'Infant room' }, { room_id: 'r_toddler', room_name: 'Toddler room' }],
     staff_notes: [{ text: 'Loved the water table.', time_label: '10:30 AM', by_initials: 'MT' }],
     note_line: 'A great day.',
     infant_record: true,
     updated_label: 'Updated 4:30 PM',
   })
+  // Yesterday's note for staff is allowed and empty; tomorrow is not.
+  const past = await call('GET', '/api/staff/children/c_ava/note?date=2026-09-13', { token: marie, now: nl('16:31') })
+  assert.deepEqual([past.status, past.body.arrived, past.body.meals], [200, null, []])
   const ben = await call('GET', '/api/staff/children/c_ben/note', { token: marie, now: nl('16:31') })
   assert.deepEqual([ben.body.infant_record, ben.body.child.room_name, ben.body.child.age_group, ben.body.left, ben.body.note_line],
     [false, 'Preschool room', 'preschool', null, null])
   assert.deepEqual(ben.body.arrived, { time_label: '8:10 AM', by: 'Greg C. (SAMPLE)' })
   assert.deepEqual([ben.body.meals, ben.body.naps, ben.body.toileting, ben.body.moods, ben.body.staff_notes], [[], [], [], [], []])
-  assert.deepEqual(ben.body.activities, [{ room_name: 'Preschool room', text: 'Not Ava\'s room today.' }])
-  // Yesterday's note for staff is allowed and empty; tomorrow is not.
-  const past = await call('GET', '/api/staff/children/c_ava/note?date=2026-09-13', { token: marie, now: nl('16:31') })
-  assert.deepEqual([past.status, past.body.arrived, past.body.meals], [200, null, []])
+  assert.deepEqual(ben.body.activities, [{ room_id: 'r_preschool', room_name: 'Preschool room', text: 'Not Ava\'s room today.' }])
+  assert.deepEqual(ben.body.rooms_today, [{ room_id: 'r_preschool', room_name: 'Preschool room' }])
+  assert.deepEqual(past.body.rooms_today, [], 'no placements that day')
   const future = await call('GET', '/api/staff/children/c_ava/note?date=2026-09-15', { token: marie, now: nl('16:31') })
   assert.deepEqual([future.status, future.body.field], [400, 'date'])
   const long = await call('PUT', '/api/staff/children/c_ava/note', { token: marie, body: { text: 'x'.repeat(501) } })
