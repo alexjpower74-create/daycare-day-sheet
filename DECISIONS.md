@@ -69,3 +69,16 @@ Newest at the bottom.
     ELCD-2017-L2 2(iv) asks the centre to get the parent's signature on their next visit.
 29. **No browser dialogs** (`alert`, `confirm`, `prompt`) on any page: they block the page and anything driving it, and some web
     views swallow them silently. Messages go on the page in `role="alert"`.
+30. **The centre's name and the SAMPLE badge come only from the API.** No page hard-codes the SAMPLE name; the badge shows only when
+    `sample` is true, and `/api/info` answers `sample: false` before a centre row exists, so a real deployment never shows a SAMPLE
+    badge or a guessed name before setup.
+31. **Only slice sections use `###` headings in PLAN.md.** Rig reads `### <id>` as an agent; a queued "Next round" list under `###`
+    headings made `rig guard` refuse every commit (found by dd1). Queued notes use bold labels.
+32. **The door tablet recovers when another device got there first.** On a 409 (`already_in`, `not_in`, `bad_state`) it shows the API's
+    message, re-reads the child and starts again from the first step instead of offering the same refused write (dd2's cross-review).
+33. **A closed room keeps its children editable.** An edit that sends back a child's unchanged home room is saved even if that room is
+    closed; moving a child into a closed room is still refused (dd1's cross-review).
+34. **"Fix a time" edits the visit, not the cell.** The dialog fills in the visit's own dates, so an overnight visit can be fixed from
+    either day's cell (dd1's cross-review).
+35. **A mistaken absence can be removed; a visit never can.** Absences are a supervisor's note and can be deleted; visits are the daily
+    register (kept 7 years) and are only ever fixed, with the old times and the reason kept.
