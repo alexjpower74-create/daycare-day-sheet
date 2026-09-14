@@ -76,13 +76,20 @@ export function centreName(name, sample = true) {
 export const meterPill = (meter) =>
   h('span', { class: 'pill state-pill', 'data-state': meter.state }, meter.state_label)
 
+/** Minutes as people read them: "45 min", "2 h", "7 h 25 min". */
+export const minutesLabel = (m) => {
+  const n = Math.max(0, Math.round(Number(m) || 0))
+  if (n < 60) return `${n} min`
+  return n % 60 ? `${Math.floor(n / 60)} h ${n % 60} min` : `${n / 60} h`
+}
+
 /** "1 child" / "4 children", "1 staff" */
 export const childrenCount = (n) => (n === 1 ? '1 child' : `${n} children`)
 
 /** Show a field's API error under the input named by `field` (inside scope), or in the fallback element. */
 export function showError(scope, err, fallback) {
   clearErrors(scope)
-  const target = err.field ? scope.querySelector(`[name="${CSS.escape(err.field)}"]`) : null
+  const target = err.field ? scope.querySelector(`[name="${CSS.escape(err.field)}"], [data-field="${CSS.escape(err.field)}"]`) : null
   if (target) {
     target.setAttribute('aria-invalid', 'true')
     const msg = h('p', { class: 'field-error', role: 'alert' }, err.message)

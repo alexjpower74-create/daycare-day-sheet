@@ -8,22 +8,17 @@
   <link rel="stylesheet" href="/style.css">
 </head>
 <body class="office-page">
-  <!-- M1 placeholder so the start page link lands somewhere. The office itself is dd2's M3. -->
   <div class="aurora" aria-hidden="true"></div>
   <header class="topbar" data-sticky-header>
     <div class="topbar-inner">
       <div class="topbar-main">
-        <p class="centre"><span class="centre-name">SAMPLE Little Harbour Child Care (demo)</span> <span class="sample-badge">SAMPLE</span></p>
-        <p class="topbar-meta">Office</p>
+        <p class="centre"><span class="centre-name" id="centre-name">SAMPLE Little Harbour Child Care (demo)</span> <span class="sample-badge">SAMPLE</span></p>
+        <p class="topbar-meta" id="office-meta">Office</p>
       </div>
+      <button type="button" id="signout" class="btn btn-quiet no-print" hidden>Sign out</button>
     </div>
   </header>
-  <main class="page">
-    <section class="panel">
-      <h1 class="panel-title">The office is not built yet</h1>
-      <p class="muted">Children, pickups, rooms and ratios, staff and attendance come in the next part of this build.</p>
-      <p><a class="btn btn-outline" href="/">Back to the start page</a></p>
-    </section>
-  </main>
+  <main id="app" class="page office-main"></main>
+  <script type="module" src="/office/office.js"></script>
 </body>
 </html>

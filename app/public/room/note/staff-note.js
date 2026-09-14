@@ -18,15 +18,15 @@ function reauth() {
 async function load() {
   app.replaceChildren(h('p', { class: 'empty' }, 'Loading the note…'))
   try {
-    const [note, today, detail] = await Promise.all([api.note(childId, date), api.today(), api.child(childId)])
-    build(note, today, detail)
+    const [note, today] = await Promise.all([api.note(childId, date), api.today()])
+    build(note, today)
   } catch (e) {
     if (e.status === 401) return reauth()
     app.replaceChildren(h('p', { id: 'page-error', class: 'alert', role: 'alert' }, e.message))
   }
 }
 
-function build(note, today, detail) {
+function build(note, today) {
   const isToday = note.date === today.date
   if (note.centre_name) $('#centre-name').textContent = note.centre_name
   document.title = `Daily note: ${note.child.name}`
@@ -44,20 +44,16 @@ function build(note, today, detail) {
       h('button', { type: 'button', id: 'save-line', class: 'btn btn-primary', onclick: (e) => saveLine(lineSection, line, e.currentTarget, lineStatus) }, 'Save')),
     lineStatus)
 
-  // What we did today: the rooms in the note, plus the room the child is in now
-  const byName = new Map(today.rooms.map((r) => [r.room.name, r.room]))
-  const roomIds = new Set()
-  for (const a of note.activities || []) { const r = byName.get(a.room_name); if (r) roomIds.add(r.id) }
-  if (detail.child.room_id) roomIds.add(detail.child.room_id)
-  if (!roomIds.size && detail.child.home_room_id) roomIds.add(detail.child.home_room_id)
+  // What we did today: one box per room the child was placed in today (API rooms_today, in order), prefilled from activities by id
+  const rooms = note.rooms_today || []
   const activitySection = isToday
     ? h('section', { class: 'panel no-print' },
       h('h2', { class: 'panel-title' }, 'What we did today'),
       h('p', { class: 'faint small' }, 'One line for the whole room. It shows on the note of every child in that room today.'),
-      [...roomIds].map((rid) => {
-        const room = today.rooms.find((r) => r.room.id === rid)?.room
-        if (!room) return null
-        const text = (note.activities || []).find((a) => a.room_name === room.name)?.text || ''
+      rooms.length ? null : h('p', { class: 'empty' }, 'The child has not been in a room today.'),
+      rooms.map(({ room_id: rid, room_name: name }) => {
+        const room = { id: rid, name }
+        const text = (note.activities || []).find((a) => a.room_id === rid)?.text || ''
         const ta = h('textarea', { id: `activity-${rid}`, class: 'activity', 'data-room': rid, name: 'text', maxlength: '500', rows: '2' }, text)
         const status = h('div', { class: 'status-line' })
         const field = h('div', { class: 'field' },

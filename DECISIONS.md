@@ -61,3 +61,11 @@ Newest at the bottom.
     taken over through the API.
 26. **QA runs from worktrees pinned with `--ref`** (`rig qa <sha>` without `--ref` grades main) and gates on each command's own
     exit code; a second pinned worktree on the lead's port lets two slices be graded at once.
+27. **A child still in the building is "still here", never "Not signed out".** Only a visit left open from an earlier date is a
+    forgotten sign-out that needs "Fix a time". Found by looking at the docs screenshots: at 10:29 AM the office flagged all 15
+    children who were simply still in their rooms.
+28. **Office follow-ups have their own route** (`GET /api/office/follow-ups`): signatures still owed from the last 14 days, whether
+    or not the child is here now, and visits left open from earlier days. The door's own list is door-only, and Policy
+    ELCD-2017-L2 2(iv) asks the centre to get the parent's signature on their next visit.
+29. **No browser dialogs** (`alert`, `confirm`, `prompt`) on any page: they block the page and anything driving it, and some web
+    views swallow them silently. Messages go on the page in `role="alert"`.

@@ -227,3 +227,82 @@ All 46 in `app/tests/web/shots/` are now from the real Worker, produced by the s
 - **W1 (dd1):** `signature_svg` still lacks the contract's stroke attributes. My M3 register will rely on API.md and add no path CSS, so it needs W1 fixed first.
 - `tests/web/cross-review-dd1-m1.mjs` is kept as the record of the cross-review. Delete it whenever you like.
 - Every server I started is stopped: 7801, 7803, 7807 and their inspector ports are free.
+
+## M3: office and printable register (2026-09-14)
+
+I merged `main` twice: once at the start, then after "Merge dd1 M2" (9ad39dc) and "Merge dd1 contract changes" (31378ea) both landed. Every office, attendance and register spec below ran against those routes on the real Worker. Nothing was mocked.
+
+### dd1's cross-review of my M1 — DONE (each with a test proven red without the fix)
+
+| # | fix | test | red without the fix |
+|---|---|---|---|
+| 1 | The child sheet reads nap state from the fresh `GET /api/staff/children/:id` when it opens, never from the last poll. On `already_napping` / `not_napping` it redraws from the server and shows the API's text. | `room.spec` "the sheet takes the nap from the server when it opens…". The page's timers are held by Playwright's clock, so the only fresh data is that request. Kevin starts, then ends, the nap through the API. | HEAD's `room.js`: `Error: sheet opened after the other phone started the nap` |
+| 2 | Undo shows only on the signed-in educator's own logs, and on every log for the supervisor. | `room.spec` "Undo shows only on your own logs…": Marie sees no Undo on Kevin's log; Dana, on another phone, undoes it, and the API agrees. | HEAD's `room.js`: `Error: no Undo on Kevin's log for Marie` |
+| 3 | The staff note builds its "What we did today" boxes from `rooms_today` and prefills them from `activities` by `room_id`. The name-to-id mapping is gone. | `note.spec` "…a box for every room the child was in today, in order". Ava moves infant → toddler → infant with no lines written, and saves one for the toddler room. | HEAD's `staff-note.js`: `Error: one box per room in rooms_today`, expected 2, received 1 |
+| 4 | Mock data: already gone in M2. | | |
+
+Each proof was run by swapping in the pre-fix file from HEAD, then restoring the fixed one, confirmed with `cmp`.
+
+### What I built — DONE
+
+- **`/office/`** (`office.js`, `attendance.js`, `dates.js`):
+  - Supervisor keypad sign-in. An educator's PIN signs in but shows `#office-refused` "Only the supervisor can open the office." with "Sign out and use another PIN".
+  - Tabs `role="tab"`: a left rail at 1280, a scrolling top bar at 390, with arrow keys between tabs.
+  - **Today:** counts, room meter cards (`data-state`), "Print the daily register" per room, and lists "Signature needed" and "Not signed out" (the last 14 days before today).
+  - **Children:** list rows `[data-child-row]` (No longer registered listed separately); the child form (API field names, errors under the field); people rows `[data-person-row]` with "May pick up" / "Emergency contact" switches (each sends only the changed flag, since the Worker's PUT is partial) and Remove; "Add a person".
+  - **Rooms and ratios:** "Your licence may differ." plus the API note; a ratio card per group with `input[name="per-…"]` / `input[name="max-…"]`, `button.save-ratio` / `button.reset-ratio`, a "Not set." row, "Changed from the cited number."; room forms with the age group picker and the s.54(9) line.
+  - **Staff:** a form per person (role, active, new PIN) and "Add staff". `pin_taken` shows under the PIN field.
+  - **Attendance:** Day / Week / Month, Previous / Next, `#attendance-table` with `[data-cell]`, `[data-total]`, per-date totals, `#attendance-total`, `#attendance-child-days`.
+    - Cells: present "7 h 25 min" (a button that opens Fix a time); "Not signed out" + "Fix a time"; "Away: Sick"; missing "No record" (opens Mark away for that child and date); `not_booked` and **`upcoming` are empty cells**, as asked.
+    - "Mark away" and "Fix a time" are `<dialog>` forms, with API errors under the field.
+    - "Download CSV" / "Download summary CSV" fetch with the token and save the Worker's bytes as a blob, with the Content-Disposition filename.
+- **`/office/register/?date=&room=`:** one homeroom in a table: Child, Date of birth, Emergency contact, In and Out (time, by, signature), Moves, Notes ("Recorded by MT, signature needed", "Changed by Dana K. (SAMPLE): …"), and `#kept-note`.
+  - **Signatures are rebuilt, not injected:** the Worker's SVG is parsed and only `<path>` elements are copied, when `d` matches `^[ML0-9 ]+$`, with a short list of stroke attributes. The contract's stroke attributes do the drawing, with no path CSS.
+  - Print hides the top bar, Back and Print.
+- **`dates.js`:** calendar arithmetic in integers (days since 1970), with no `Date` object, so no browser clock or zone reaches the office. "Today" comes from `/api/info`.
+
+### Specs — DONE
+
+`cd app && E2E_PORT=7803 npx playwright test tests/web`: **102 passed, 2 skipped, 0 failed** (4.5 min) across chromium-390, chromium-1280, webkit-390 and webkit-1280. The skips are the phone-only tap sweep on the 1280 projects, as in M2.
+
+- **`office.spec.mjs`** (5):
+  - The educator refusal.
+  - Today counts, meters with `stateColour`, and 3 register links.
+  - Add a child and a person with May pick up off; `GET /api/door/children/:id` lists them with `may_pick_up: false`; tapping the switch makes it `true`.
+  - **The ratio test:**
+    - Infant set to 1:4 and saved; after a reload the form shows 4.
+    - A second phone context's room view card is `at_limit` with 4 infants and 1 staff.
+    - Clearing the number shows "Not set." and the Today card is `unset` / "Not set".
+    - "Back to the cited number" gives 3 and 6, and the API shows `edited: false`.
+  - Add staff with PIN 1593: the API's `pin_taken` text sits under the PIN field, and nothing is added.
+- **`attendance.spec.mjs`** (4). The day is set up through the API with `X-Test-Now`: Liam 8 AM to 4 PM Monday, Ava 10:30 PM Mon to 1:15 AM Tue, Nora never signed out, Jack away on holiday. The page runs at Wed noon.
+  - **Week view:** Ava's Sep 14 cell shows "1 h 30 min" and Sep 15 "1 h 15 min"; `[data-total="c_ava"]` and `#attendance-total` equal the API's minutes formatted.
+  - **Other cells:** Liam "8 h"; "Away: Holiday"; missing "No record"; upcoming and not booked empty (the API statuses are checked too).
+  - **Fix a time:** "Not signed out", then saving without a reason shows the API's reason error under the field; with a reason the cell reads "8 h" and the API has 480 minutes, `open: false`.
+  - **Mark away:** Owen, sick, shows "Away: Sick", and the API has the absence with its note.
+  - **Downloads:** both CSVs by a real tap equal `request.fetch` of the same URL byte for byte (`Buffer.compare`), with the exact filenames. This passes in WebKit too.
+- **`register.spec.mjs`** (1). Set up: Ava door-signed in and out, moved to Toddler 10:00 and back 10:40; Liam recorded by Marie; Nora's time fixed by Dana. From Today → "Print the daily register":
+  - Each API row's signed ends appear as drawn `svg.signature path` elements whose `d` equals the Worker's path.
+  - The moves line reads "Went to Toddler room 10:00 AM, back 10:40 AM", with "Recorded by MT, signature needed" and "Changed by Dana K. (SAMPLE): …" in the notes, and `#kept-note` equal to the API's note.
+  - Print media hides the navigation and keeps the table.
+
+### Negative controls — DONE (6 of 6 red as intended)
+
+(a)–(d) are unchanged from M2. New:
+
+| control | break in the copy | red output |
+|---|---|---|
+| (e) `negative-attendance-day.mjs` | `office/attendance.js`: a present day made only of the part after midnight (`every(p => p.continued)`) renders nothing | `Error: Ava Sep 15 cell · Expected: "1 h 15 min" · Received: ""` |
+| (f) `negative-ratio-reload.mjs` | `office/office.js`: the per-caregiver input shows `rule.default_children_per_caregiver` | `Error: ratio form after reload · Expected: "4" · Received: "3"` |
+
+`negative-all.mjs` now runs all six. `app/tests/web/negative-control.log` has 0 home paths.
+
+### Screenshots — DONE
+
+`app/tests/web/shots/` holds every screen at 390 and 1280 in chromium and webkit, all from the real Worker: start, room-signin, room, room-over, sheet, sheet-toast, record, staff-note, parent-note, parent-note-print, parent-note-error, office-refused, office-today, office-children, office-rooms, office-staff, office-attendance, register, register-print, plus parent-note-expired at 390.
+
+### Left / notes
+
+- **Office tap sizes:** at 390 the office uses the same 44 px buttons, but the M2 targets sweep covers only the room view and notes. I added no office sweep, because M3's brief does not ask for one.
+- **Today's lists:** "Signature needed" on Today lists children signed in now with a pending signature (what `GET /api/staff/today` gives). A pending signature from a child who has gone home shows at the door, not here. Lead: say if Today should read the 14-day door list instead.
+- **Servers:** every server I started is stopped; 7801, 7803, 7807 and their inspector ports are free.
