@@ -324,11 +324,10 @@ async function refreshSheet(s) {
   }
   if (sheet !== s) return false
   s.data = d
-  const found = findChild(s.childId)
   const logs = [...d.logs].sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0))
+  // Nap state comes from this fresh answer, never from the last 5-second poll: another phone may have started the nap since.
   let napping = false
   for (const l of logs) { if (l.kind === 'nap_start') napping = true; if (l.kind === 'nap_end') napping = false }
-  if (found) napping = !!found.child.napping
 
   s.titleEl.textContent = d.child.name
   const open = d.visit && !d.visit.out_at
@@ -349,12 +348,15 @@ async function refreshSheet(s) {
     meterPill(r.meter)))
   })
 
-  renderIf(s.logs, logs, () => {
+  // The Worker lets an educator void only their own logs and the supervisor any; the page offers Undo only where it will work.
+  const me = staffSession.staff()
+  const canUndo = (log) => !!me && (me.role === 'supervisor' || log.by?.id === me.id)
+  renderIf(s.logs, { logs, me: me?.id }, () => {
     if (!logs.length) return h('li', { class: 'empty' }, 'Nothing logged yet today.')
     return [...logs].reverse().map((log) => h('li', { class: 'list-row', 'data-log': log.id },
       h('span', { class: 'grow' }, h('span', { class: 'log-label' }, log.label),
         h('span', { class: 'faint log-meta' }, `${log.time_label}${log.by?.initials ? ` · ${log.by.initials}` : ''}`)),
-      h('button', { type: 'button', class: 'btn btn-quiet undo', onclick: (e) => undoLog(s, log, e.currentTarget) }, 'Undo')))
+      canUndo(log) ? h('button', { type: 'button', class: 'btn btn-quiet undo', onclick: (e) => undoLog(s, log, e.currentTarget) }, 'Undo') : null))
   })
   return true
 }
@@ -371,9 +373,16 @@ async function doLog(s, body, btn) {
   try {
     ({ log } = await api.log(s.childId, body))
   } catch (e) {
+    btn.disabled = false
+    if ((e.code === 'already_napping' || e.code === 'not_napping') && sheet === s) {
+      // Someone else changed the nap: redraw the sheet from the server, then say what the API said.
+      await afterWrite(s)
+      if (sheet === s) toast(e.message, { slot: s.slot, error: true })
+      return
+    }
     return handleError(e, s)
   } finally {
-    btn.disabled = false
+    if (btn.isConnected) btn.disabled = false
   }
   if (sheet === s) toast(`Saved: ${log.label}`, { slot: s.slot, action: 'Undo', onAction: () => undoLog(s, log) })
   await afterWrite(s)
