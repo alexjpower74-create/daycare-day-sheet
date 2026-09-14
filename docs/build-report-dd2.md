@@ -460,3 +460,11 @@ I merged `main` first (bd82cd9). dd1's office cross-review had 7 findings. I had
 - **Negative controls:** (h) is new this round and red as intended. (a)–(g) are unchanged since they were last shown red, and `negative-all.mjs` runs all eight.
 - **Door cross-review:** the section above this one.
 - **Servers:** every server I started is stopped.
+
+### A guard refusal during the final commits — explained, and passing after the merge
+
+While committing items 6 and 7 and this report, `rig guard --agent dd2` printed REFUSED. It listed PLAN.md, dd1's and the lead's reports, and `worker/src` and `worker/tests` files. My script showed only the guard's last line and did not stop on its exit code, so the commits went ahead. None of those files was in them.
+- **Per commit** (`git show --name-only`): 2fdd994, ed58dc7, ac5a600 and bdc7211 touch only `app/public/office/*`, `app/tests/web/*` and this report.
+- **The cause:** main had moved past my last merge (the lead merged round 5 as 14be111). The branch then had two merge bases (6211efc and d75a86f), and the comparison with main counted the other slices' files that came in through that merge.
+- **After `git merge main`** (9101c07): one merge base, guard `ok dd2: 13 file(s), all inside slice (vs main)` with exit 0, and no path outside dd2's in `git diff main...HEAD`.
+- **Lesson for my scripts:** check the guard's exit code before committing, not just its last line.
