@@ -336,6 +336,8 @@ writes README / DEPLOY / build report, pushes the private repo, closes the slice
    attendance CSV Note reads `Still here`; the summary's `Not signed out` counts only earlier dates. Tests, and a negative control
    whose copy flags today's open visit as not signed out.
 3. Door card status pills stay on one line at 1024×768 ("In since 7:40 AM" wraps today).
+4. Before the centre row exists, `GET /api/info` answers `sample: false` (API.md); today `worker/src/index.js` says `true`, so a real
+   deployment would show a SAMPLE badge before setup. API test on an empty D1.
 
 **For dd2**
 1. Replace both `alert()` calls in `office/register/register.js` with an on-page `role="alert"` message; a spec opens the register
