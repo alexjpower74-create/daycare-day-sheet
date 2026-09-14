@@ -1190,3 +1190,35 @@ not ok 1 - follow-ups: a signature owed for a child who went home is listed, one
     -       id: 'p_ava_mother',
     -       name: 'Sarah M. (SAMPLE)'
 RESULT: RED as intended (exit 1); red tests: follow-ups: a signature owed for a child who went home is listed, one 15 dates old is not, signing removes it; open visits from before today oldest first, not today's
+
+=== negative:stillhere — 2026-09-14T13:07:55.417Z
+break: attendance.js isStillHere is always false, so a child still here today is flagged Not signed out and counted
+patched: src/attendance.js
+run: node tests/run.mjs --fresh --api-only --grep ^attendance: a visit open today (PORT 7805)
+== api: fresh Worker on http://127.0.0.1:7805 (state .state-7805)
+# tests 2
+# pass 1
+# fail 1
+not ok 1 - attendance: a visit open today is still here, with no Not signed out flag; the next day the same visit is not signed out
+  ---
+  duration_ms: 171.183537
+  type: 'test'
+  location: 'worker/tests/api-m2.test.mjs:458:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+    
+      {
+        absence: null,
+        minutes: 0,
+        open: true,
+        parts: [
+    ...
+        status: 'present',
+    +   still_here: false
+    -   still_here: true
+      }
+    
+RESULT: RED as intended (exit 1); red tests: attendance: a visit open today is still here, with no Not signed out flag; the next day the same visit is not signed out

@@ -20,6 +20,7 @@
     "negative:ratelimit": "node tests/negative-ratelimit.mjs",
     "negative:openvisit": "node tests/negative-openvisit.mjs",
     "first-setup": "node tools/first-setup.mjs",
-    "negative:followups": "node tests/negative-followups.mjs"
+    "negative:followups": "node tests/negative-followups.mjs",
+    "negative:stillhere": "node tests/negative-stillhere.mjs"
   }
 }

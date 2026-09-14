@@ -72,6 +72,8 @@ export function buildAttendance({ from, to, today, children, rooms, visits, abse
   const list = children.filter((ch) => registered(ch) || touched.has(ch.id))
     .sort((a, b) => sortOf(a) - sortOf(b) || a.name.localeCompare(b.name))
 
+  // An open visit dated today is a child who is simply still here; one dated before today was never signed out.
+  const isStillHere = (p) => p.open && p.date === today
   const rows = []
   const out = list.map((ch) => {
     const roomName = room.get(ch.home_room_id)?.name ?? ''
@@ -92,9 +94,10 @@ export function buildAttendance({ from, to, today, children, rooms, visits, abse
         away++
         byReason[absence.reason]++
       }
-      open += parts.filter((p) => p.open).length
+      open += parts.filter((p) => p.open && !isStillHere(p)).length
       days[date] = {
-        status, minutes: dayMinutes, open: parts.some((p) => p.open), absence: absence ? absenceView(absence) : null,
+        status, minutes: dayMinutes, open: parts.some((p) => p.open), still_here: parts.some(isStillHere),
+        absence: absence ? absenceView(absence) : null,
         parts: parts.map((p) => ({
           visit_id: p.visit.id, in_label: endLabel(p.visit.in_at, date), out_label: p.visit.out_at ? endLabel(p.visit.out_at, date) : null,
           minutes: p.minutes, continues: p.continues, continued: p.continued,
@@ -102,7 +105,7 @@ export function buildAttendance({ from, to, today, children, rooms, visits, abse
       }
       for (const [i, p] of parts.entries()) {
         const d = days[date].parts[i]
-        const note = p.open ? 'Not signed out'
+        const note = p.open ? (isStillHere(p) ? 'Still here' : 'Not signed out')
           : [p.continued ? 'Continued from the day before' : '', p.continues ? 'Continues past midnight' : ''].filter(Boolean).join('; ')
         rows.push({ sort: [date, sortOf(ch), ch.name, p.start], cells: [date, ch.name, roomName, d.in_label, nameOf.get(p.visit.in_person_id) ?? '',
           d.out_label ?? '', p.visit.out_at ? nameOf.get(p.visit.out_person_id) ?? '' : '', p.minutes, hours(p.minutes), '', note] })

@@ -42,12 +42,29 @@ test('open visit: present, 0 minutes, one part on its sign-in date, "Not signed 
   const a = buildAttendance({ from: '2026-09-11', to: '2026-09-14', today: '2026-09-14', children: [kid('c1')], rooms: ROOMS, people: PEOPLE, absences: [],
     visits: [visit('v1', 'c1', at('2026-09-11', 9), null)] })
   const c = a.json.children[0]
-  assert.deepEqual(c.days['2026-09-11'], { status: 'present', minutes: 0, open: true, absence: null,
+  assert.deepEqual(c.days['2026-09-11'], { status: 'present', minutes: 0, open: true, still_here: false, absence: null,
     parts: [{ visit_id: 'v1', in_label: '9:00 AM', out_label: null, minutes: 0, continues: false, continued: false }] })
   assert.deepEqual(['2026-09-12', '2026-09-13', '2026-09-14'].map((d) => c.days[d].status), ['not_booked', 'not_booked', 'missing'])
   assert.deepEqual([c.minutes, c.days_present, c.not_signed_out], [0, 1, 1])
   assert.deepEqual(a.rows, [['2026-09-11', 'c1 (SAMPLE)', 'A room', '9:00 AM', 'In P. (SAMPLE)', '', '', 0, '0.00', '', 'Not signed out']])
   assert.deepEqual(a.summary.at(-1), ['Total', '', 1, 0, '0.00', 0, 0, 0, 0, 0, 0, 1])
+})
+
+test('open visit dated today: still here, no "Not signed out" flag; seen the next day it is not signed out', () => {
+  const visits = [visit('v1', 'c1', at('2026-09-14', 9), null)]
+  const input = { from: '2026-09-14', to: '2026-09-15', children: [kid('c1')], rooms: ROOMS, people: PEOPLE, absences: [], visits }
+  const today = buildAttendance({ ...input, today: '2026-09-14' })
+  const day = today.json.children[0].days['2026-09-14']
+  assert.deepEqual([day.status, day.minutes, day.open, day.still_here], ['present', 0, true, true])
+  assert.equal(today.json.children[0].not_signed_out, 0)
+  assert.equal(today.rows[0][10], 'Still here')
+  assert.equal(today.summary.at(-1)[11], 0)
+  const next = buildAttendance({ ...input, today: '2026-09-15' })
+  const later = next.json.children[0].days['2026-09-14']
+  assert.deepEqual([later.open, later.still_here], [true, false])
+  assert.equal(next.json.children[0].not_signed_out, 1)
+  assert.equal(next.rows[0][10], 'Not signed out')
+  assert.equal(next.summary.at(-1)[11], 1)
 })
 
 test('missing (today or before), upcoming (after today), not booked, away, not yet registered, and absence rows', () => {
