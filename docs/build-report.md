@@ -15,6 +15,7 @@ slice's own tree. Pass/fail comes from each command's own exit code, echoed insi
 | dd1 M2 | `9f8efad` | every office route, attendance cut at local midnight, CSVs, fix a time, register, demo seed, first-setup tool | unit 31 / 0 / 0, API 40 / 0 / 0, setup 1 / 0 / 0 (Worker without TEST_MODE: real PIN signs in, reset 404); negative controls 10 of 10 red (+ utcday, csvguard, ratioedit, ratelimit, openvisit) |
 | dd1 M3a | `8bf2c61` | contract changes: attendance `upcoming`, note `rooms_today` + activity room ids, demo seed without moving a child | unit 31 / 0 / 0, API 40 / 0 / 0, setup 1 / 0 / 0; negative controls 10 of 10 red |
 | dd2 M3 | `4f84a39` | the office (Today, Children, Rooms and ratios, Staff, Attendance with CSVs) + printable register; dd1 cross-review fixes (nap state, Undo on own logs) | web 102 / 0 / 2 skipped; web negative controls 6 of 6 red (+ attendance-day, ratio-reload) |
+| dd1 M3b | `bdbcaa9` | the door tablet (keypad setup, sign in/out with finger signature, not-on-the-list block, over banner, add a signature) | Worker unit 31 / 0 / 0, API 40 / 0 / 0, setup 1 / 0 / 0; door 24 / 0 / 0 (chromium + webkit tablet); door negative controls 4 of 4 red (pickup-list, over-banner, overlay, tap-after-stroke) |
 
 ## Rules check
 
