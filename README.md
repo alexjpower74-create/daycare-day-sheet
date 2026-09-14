@@ -57,15 +57,22 @@ Then open:
 
 ## Tests
 
-<!-- lead fills in from the final pinned QA run -->
-Final QA numbers are in `docs/build-report.md`.
+Final QA, one run pinned to main `8f40b4b` (details and every negative control in `docs/build-report.md`):
+
+| Suite | Passed | Failed | Skipped |
+|---|---|---|---|
+| Rules: 21 quotes checked word for word against the saved law | 21 | 0 | |
+| Worker: unit 32, empty database 1, API 44, first setup without TEST_MODE 1 | 78 | 0 | 0 |
+| Playwright: door 34, web 146, journey 2 (chromium + webkit; tablet 1024×768, phone 390, desktop 1280; real taps and signatures) | 182 | 0 | 6 by width |
+| Negative controls (break a copy, the check must go red): Worker 14, door 8, web 8, journey 1 | 31 red of 31 | | |
 
 ```
 npm run rules                                   # 21 quotes against data/sources (self-test first)
-cd worker && npm test                           # unit + API against wrangler dev --local + first-setup
+cd worker && npm test                           # unit + empty D1 + API against wrangler dev --local + first setup
 cd worker && npm run negative                   # Worker negative controls (each must go red)
 cd app && npm install && npx playwright install chromium webkit
-cd app && E2E_PORT=7809 npx playwright test     # door, room, notes, office, journey; chromium + webkit
+cd app && E2E_PORT=7809 npx playwright test     # door, room, notes, office, journey
+npm run test:e2e:negative                       # door, web and journey negative controls
 ```
 
 ## What deploying needs

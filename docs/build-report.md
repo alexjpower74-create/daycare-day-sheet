@@ -5,6 +5,62 @@ office), both Opus medium, run with Rig in herdr tabs. Local only: nothing deplo
 Every number below was measured in a QA worktree pinned to the sha shown (`rig qa --ref <sha> --port 7809`), never in a
 slice's own tree. Pass/fail comes from each command's own exit code, echoed inside the run.
 
+## Final QA
+
+**DONE.** One run, pinned to main `8f40b4b` (every slice round merged), nothing re-run to get green. Commits after `8f40b4b` are
+documentation, screenshots and this report only. Command: `rig qa --ref 8f40b4b --port 7809 --run "bash final-stages.sh"`; every stage
+runs whatever the previous one did, echoes its own exit code, and a stage with no summary lines would have printed NOT RUN.
+
+| Suite | Command (from the QA worktree) | Passed | Failed | Skipped |
+|---|---|---|---|---|
+| Rules (quotes against `data/sources/`, self-test first) | `npm run rules` | 21 of 21 | 0 | |
+| Worker unit | `cd worker && PORT=7809 npm test` | 32 | 0 | 0 |
+| Worker on an empty D1 (before any centre row) | same run | 1 | 0 | 0 |
+| Worker API (`wrangler dev --local`, `TEST_MODE`) | same run | 44 | 0 | 0 |
+| Worker first setup (real centre SQL, Worker **without** `TEST_MODE`) | same run | 1 | 0 | 0 |
+| Playwright door (tablet 1024×768) | `cd app && E2E_PORT=7809 npx playwright test` | 34 | 0 | 0 |
+| Playwright web (room view, notes, office, register; 390 + 1280) | same run | 146 | 0 | 6 |
+| Playwright journey (tablet + phone + desktop contexts) | same run | 2 | 0 | 0 |
+| Worker negative controls | `cd worker && NEG_PORT=7809 npm run negative` | 14 red of 14 | | |
+| Door negative controls | `cd app && npm run negative:door` | 8 red of 8 | | |
+| Web negative controls | `cd app && npm run negative:web` | 8 red of 8 | | |
+| Journey negative control | `cd app && npm run negative:journey` | 1 red of 1 | | |
+
+Playwright by project: chromium-tablet 18 / 0 / 0, webkit-tablet 18 / 0 / 0, chromium-390 37 / 0 / 1, webkit-390 37 / 0 / 1,
+chromium-1280 36 / 0 / 2, webkit-1280 36 / 0 / 2. The 6 skips are by width, each with a written reason: the phone tap-size sweep and the
+before-setup check in the two 1280 projects, the register sweep in the two 390 projects. No 78xx port was left listening.
+
+### Negative controls (31, each breaks a copy in `.negative/`, never the shipped code, and must go red)
+
+- **Worker (14):** `count` (the last child signed in is not counted → the ratio moment test), `limit` (at the limit treated as over),
+  `pickup` (sign-out ignores "May pick up"), `expiry` (parent link cut at UTC midnight), `expiry-never` (link never expires), `utcday`
+  (visits cut at UTC midnight → the across-midnight minutes), `csvguard` (no formula guard), `ratioedit` (meter ignores the saved ratio),
+  `ratelimit` (wrong PINs never counted), `openvisit` (an open visit counted up to now), `followups` (only children here now),
+  `stillhere` (never still here), `info-sample` (SAMPLE badge before setup), `homeroom` (a closed home room blocks every edit).
+- **Door (8):** `pickup-list` (pick-up list shows everyone), `over-banner` (no red banner), `overlay` (a cover over Sign in → hit-test),
+  `tap-after-stroke` (Done ignores the finger lifting → a fast tap after signing is lost), `stale-label` (last week's open visit reads
+  "In since"), `null-text` (stray "null" under the grid), `pill-wrap` (status pills back in a narrow column), `stale-sheet` (the sheet
+  offers a write another device already made).
+- **Web (8):** `card-state` (every room card says ok), `over-colour` (over painted green while `data-state` still says over),
+  `expiry-page` (parent page keeps the old note after a 410), `overlay` (a cover over "Ate all"), `attendance-day` (the part after
+  midnight dropped), `ratio-reload` (the ratio form shows the cited default after saving), `still-here` (today's open visit flagged),
+  `overnight-fix` (Fix a time uses the cell's date).
+- **Journey (1):** the room view sends "some" for "Ate all" → the whole-day journey fails at the meal check.
+
+### Real defects found (every one fixed with a test that fails without the fix)
+
+- **By the checks:** a tap on Done less than a second after a fast signature stroke was dropped on a touch tablet (`touch-action: none`);
+  the office tab bar slid under the sticky header at 390 so no tab could be tapped; WebKit sized a `<select>` to its longest cited label
+  (141 px sideways scroll); a toast covered "Make parent link"; a sheet filled in after its buttons appeared so a tap landed on "Move".
+- **By screenshots:** the office flagged all 15 children still in the building as "Not signed out" (lead; a contract gap); a stray "null"
+  and circle-shaped pills on the door grid (dd1).
+- **By cross-review (across the slice boundary):** signature SVGs with no stroke; nap state stale when a sheet opens; Undo offered on other
+  educators' logs; Today blind to follow-ups for children who had gone home; a closed home room blocking every edit; Fix a time sending the
+  wrong date on an overnight visit; no way to remove an absence; a failed `/api/info` leaving "Loading…"; the door keeping a refused write,
+  a hard-coded centre name, and a grid that stopped on an info failure.
+- **Process:** one commit went in with its own spec red (a pipe hid Playwright's exit code) and was fixed in the next; a class's `display`
+  beating the `hidden` attribute is now a global rule in theme.css; the lead's "Next round" headings broke `rig guard` and were renamed.
+
 ## QA history (each milestone graded before it was merged)
 
 | When | Pinned sha | What | Result |
