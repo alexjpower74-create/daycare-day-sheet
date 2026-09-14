@@ -35,3 +35,22 @@ caught before the real check runs.
 - `rig qa <sha>` pins main unless the sha is passed as `--ref` (reported to Onyx; LEAD-RULES fixed).
 - A QA run that writes tracked files (the negative-control log, screenshots) leaves the QA worktree dirty and the next re-pin
   fails; the lead restores the QA worktree after each run.
+
+## Known gaps (what the app does not do, or cannot know yet)
+
+- **Whether an electronic daily register counts.** The Policy and Standards Manual describes a bound, numbered, pen-written register
+  (ELCD-2017-L2 1). Whether a tablet register with finger signatures is accepted is Unknown until the Department of Education (Early
+  Learning and Child Care) says so. The office prints the register per homeroom so a centre can keep paper as well.
+- **Group size counts children present, not children assigned.** s.53(3) limits the children *assigned* to a homeroom; the meter counts
+  who is in the room now. The office does not yet warn when more registered children are assigned to a room than its maximum.
+- **Ages are not checked against the room.** A child whose age has moved out of the room's range is not flagged; the operator picks the
+  age group per room (and the youngest group for a mixed room, s.54(9)).
+- **Certification is not checked** (s.54(6)–(8)): the meter counts staff, not their certificates.
+- **Staff presence is what staff tap.** "I'm in this room" is self-reported; there is no shift clock or break tracking.
+- **The door tablet needs a connection.** There is no offline queue on the door; a tablet without Wi-Fi cannot sign anyone in.
+- **Parent links are capability links.** Anyone with today's link sees that child's note until midnight; there are no parent accounts,
+  and nothing is emailed or texted (by design).
+- **One centre per deployment, Newfoundland time only.**
+- **No backups of its own.** D1 Time Travel covers 30 days; registers must be kept 7 years (s.45(3)), so a deployment needs exports.
+- **Tested in Playwright's Chromium and WebKit** at tablet 1024×768, phone 390 and desktop 1280, not on a physical iPad or phone.
+

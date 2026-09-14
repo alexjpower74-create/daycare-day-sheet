@@ -49,6 +49,11 @@ Then open:
 - **Office:** children and their people, rooms and ratios (with citations), staff and PINs, attendance by day / week / month with visits
   cut at local midnight, absences with reasons, fixing a forgotten sign-out with a reason, CSV and summary CSV, and the printable daily
   register per homeroom (s.45).
+- **Follow-ups:** the office Today tab lists signatures still owed from the last 14 days (a staff member recorded the time because the
+  parent did not sign; Policy ELCD-2017-L2 2(iv)) and visits left open from earlier days. A child who is simply still in the building
+  today reads "Still here", never "Not signed out".
+- **Corrections without losing the record:** "Fix a time" edits the visit (with a reason, keeping the old times), including an overnight
+  visit from either day; a mistaken absence can be removed; visits are never deleted.
 
 ## Tests
 
@@ -80,4 +85,4 @@ Before any real centre uses it (not technical):
 - `PLAN.md` is the build contract, `docs/API.md` the API, `docs/RULES.md` the law, `DECISIONS.md` every call made overnight.
 - `docs/build-report.md` has the QA history and the negative controls; the slices' own reports are `docs/build-report-dd1.md` and
   `docs/build-report-dd2.md`.
-- Known gaps: see the build report.
+- Known gaps: `docs/build-report.md`, "Known gaps".
