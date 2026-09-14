@@ -129,6 +129,7 @@ export const api = {
   fixVisit: (visitId, body) => call('PUT', `/api/office/visits/${id(visitId)}`, body, { auth: true }),
   attendance: (from, to) => call('GET', `/api/office/attendance?from=${id(from)}&to=${id(to)}`, undefined, { auth: true }),
   register: (date, roomId) => call('GET', `/api/office/register?date=${id(date)}&room_id=${id(roomId)}`, undefined, { auth: true }),
+  followUps: () => call('GET', '/api/office/follow-ups', undefined, { auth: true }),
 
   /** A CSV export as the Worker sent it (bytes untouched), with the filename from Content-Disposition. */
   async download(path) {

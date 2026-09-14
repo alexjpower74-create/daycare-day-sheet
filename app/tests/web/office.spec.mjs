@@ -2,7 +2,7 @@
 // Every action under test is a real tap, typing, keypad press or a native select/date fill; the API sets up and reads back.
 import { test, expect } from '@playwright/test'
 import {
-  fresh, assertNoThirdParty, newContext, tap, type, keypad, api, bearer, doorToken, signInViaApi, presenceViaApi, staffToken,
+  at, fresh, assertNoThirdParty, newContext, tap, type, keypad, api, bearer, doorToken, signInViaApi, signOutViaApi, presenceViaApi, staffToken,
   stateColour, STATE_RGB, shot, SUPERVISOR_PIN, EDUCATOR_PIN,
 } from '../helpers.mjs'
 
@@ -146,3 +146,44 @@ test('adding staff with a PIN someone already has shows the API message under th
   expect(list.some((s) => s.name === 'Jo B. (SAMPLE)')).toBe(false)
 })
 
+
+test('Today follows up from the API: a pending signature for a child who went home is listed, and Fix a time clears a visit left open', async ({ page, request }, testInfo) => {
+  const door = (await api(request, 'POST', '/api/door/unlock', { pin: SUPERVISOR_PIN }, { 'X-Test-IP': 'fu-door' }, { now: at('2026-09-10T07:00:00-02:30') })).body.token
+  // Thu Sep 10: Ava in at 9:00 AM and never signed out.
+  await signInViaApi(request, door, 'c_ava', 'p_ava_mother', { now: at('2026-09-10T09:00:00-02:30') })
+  // Fri Sep 11: Marie records Liam's drop-off without a signature; he goes home at 4:00 PM, so he is not here today.
+  const marie = (await api(request, 'POST', '/api/signin', { pin: EDUCATOR_PIN }, { 'X-Test-IP': 'fu-marie' }, { now: at('2026-09-11T07:30:00-02:30') })).body.token
+  expect((await api(request, 'POST', '/api/staff/children/c_liam/in', { person_id: 'p_liam_father' }, bearer(marie), { now: at('2026-09-11T08:00:00-02:30') })).status).toBe(201)
+  await signOutViaApi(request, door, 'c_liam', 'p_liam_mother', { now: at('2026-09-11T16:00:00-02:30') })
+
+  const dana = await staffToken(request, SUPERVISOR_PIN)
+  const follow = (await api(request, 'GET', '/api/office/follow-ups', undefined, bearer(dana))).body
+  expect(follow.pending_signatures.map((p) => [p.child.id, p.which])).toEqual([['c_liam', 'in']])
+  expect(follow.not_signed_out.map((v) => v.child.id)).toEqual(['c_ava'])
+  const today = (await api(request, 'GET', '/api/staff/today', undefined, bearer(dana))).body
+  expect(today.rooms.flatMap((r) => r.children.map((c) => c.id)), 'Liam is not in the building').not.toContain('c_liam')
+
+  await officeSignIn(page)
+  await openTab(page, 'Today')
+  const liam = page.locator('[data-signature-needed="c_liam"]')
+  await expect(liam, 'a pending signature for a child who went home').toContainText('Liam K. (SAMPLE)')
+  await expect(liam).toContainText(`Drop-off ${follow.pending_signatures[0].date_label}, ${follow.pending_signatures[0].time_label}`)
+  const ava = page.locator('[data-not-signed-out="c_ava"]')
+  await expect(ava).toContainText(`${follow.not_signed_out[0].date_label}, in at ${follow.not_signed_out[0].in_label}`)
+  await expect(ava).toContainText('Thu Sep 10')
+  expect(await page.locator('#office-panel').innerText(), 'no ISO date on the Today tab').not.toMatch(/\b\d{4}-\d{2}-\d{2}\b/)
+  await shot(page, testInfo, 'web', 'office-today-follow-ups')
+
+  await tap(page, ava.getByRole('button', { name: 'Fix a time' }), 'Fix a time for Ava')
+  const dialog = page.locator('#fix-dialog')
+  await expect(dialog.locator('input[name="out_date"]')).toHaveValue('2026-09-10')
+  await dialog.locator('input[name="out_time"]').fill('17:00')
+  await type(page, dialog.locator('textarea[name="reason"]'), 'Picked up at 5; the tablet was off.')
+  await tap(page, dialog.locator('#fix-save'), 'Save the time')
+  await expect(dialog).toHaveCount(0)
+  await expect(ava, 'the fixed visit leaves the list').toHaveCount(0)
+  await expect(page.locator('#follow-up-status')).toContainText('Time fixed.')
+  const after = (await api(request, 'GET', '/api/office/follow-ups', undefined, bearer(dana))).body
+  expect(after.not_signed_out).toEqual([])
+  expect(after.pending_signatures.map((p) => p.child.id)).toEqual(['c_liam'])
+})

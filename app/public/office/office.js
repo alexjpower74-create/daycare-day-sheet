@@ -3,8 +3,7 @@
 import { api, staffSession } from '/api.js'
 import { h, $, $$, toast, avatar, meterPill, childrenCount, showError, clearErrors, icon, applyCentre } from '/ui.js'
 import { createKeypad } from '/keypad.js'
-import { showAttendance } from '/office/attendance.js'
-import { addDays } from '/office/dates.js'
+import { showAttendance, openFixVisit } from '/office/attendance.js'
 
 const app = $('#app')
 const TAB_KEY = 'daycare-day-sheet:office-tab'
@@ -152,15 +151,9 @@ const switchInput = (id, name, label, checked, extra = {}) => h('label', { class
 
 // ---------- Today ----------
 async function showToday() {
-  const today = await attempt(null, null, () => api.today())
-  if (!today) return null
-  const attendance = await attempt(null, null, () => api.attendance(addDays(today.date, -13), today.date))
+  const [today, followUps] = await Promise.all([attempt(null, null, () => api.today()), attempt(null, null, () => api.followUps())])
+  if (!today || !followUps) return null
   const inNow = today.rooms.reduce((n, r) => n + r.children.length, 0)
-  const signatureNeeded = today.rooms.flatMap((r) => r.children.filter((c) => c.awaiting_signature).map((c) => ({ child: c, room: r.room })))
-  const notSignedOut = []
-  for (const c of attendance?.children || []) {
-    for (const d of attendance.dates) if (d < today.date && c.days[d]?.open) notSignedOut.push({ child: c, date: d })
-  }
   const count = (label, n, id) => h('div', { class: 'count-card', id }, h('span', { class: 'count-number' }, String(n)), h('span', { class: 'count-label' }, label))
   const listCard = (heading, rows, empty) => h('section', { class: 'panel' }, h('h2', { class: 'panel-title' }, heading), rows.length ? h('ul', { class: 'row-list' }, rows) : h('p', { class: 'empty' }, empty))
 
@@ -176,14 +169,26 @@ async function showToday() {
       h('p', { class: 'muted small' }, `${childrenCount(r.meter.children)} · ${r.meter.staff} staff`),
       h('a', { class: 'btn btn-outline print-register', 'data-room': r.room.id, href: `/office/register/?date=${encodeURIComponent(today.date)}&room=${encodeURIComponent(r.room.id)}` },
         icon('print'), 'Print the daily register')))),
+    // GET /api/office/follow-ups: staff-recorded times still waiting for a signature (14 days, here now or not) and visits left open
+    // from earlier days. Dates are the API's labels ("Fri Sep 4"), never ISO.
     h('div', { class: 'two-col' },
-      listCard('Signature needed', signatureNeeded.map(({ child, room }) => h('li', { class: 'list-row' },
-        avatar(child.initials, room.age_group, 'sm'), h('span', { class: 'grow' }, child.name, h('span', { class: 'muted small block' }, `${room.name} · in since ${child.in_label}`)))),
+      listCard('Signature needed', followUps.pending_signatures.map((p) => h('li', { class: 'list-row', 'data-signature-needed': p.child.id, 'data-visit': p.visit_id },
+        h('span', { class: 'grow' }, p.child.name,
+          h('span', { class: 'muted small block' }, `${p.which === 'out' ? 'Pick-up' : 'Drop-off'} ${p.date_label}, ${p.time_label} by ${p.person.name}`),
+          h('span', { class: 'faint small block' }, `Recorded by ${p.recorded_by.initials}. The parent signs at the door with Add a signature.`)))),
       'No signatures are waiting.'),
-      listCard('Not signed out', notSignedOut.map(({ child, date }) => h('li', { class: 'list-row' },
-        h('span', { class: 'grow' }, child.name, h('span', { class: 'muted small block' }, date)),
-        h('button', { type: 'button', class: 'btn btn-quiet', onclick: () => { attendanceState.view = 'week'; attendanceState.anchor = date; select('attendance') } }, 'Fix a time'))),
-      'Every visit in the last two weeks is signed out.')),
+      h('section', { class: 'panel' },
+        h('h2', { class: 'panel-title' }, 'Not signed out'),
+        followUps.not_signed_out.length
+          ? h('ul', { class: 'row-list' }, followUps.not_signed_out.map((v) => h('li', { class: 'list-row', 'data-not-signed-out': v.child.id, 'data-visit': v.visit_id },
+            h('span', { class: 'grow' }, v.child.name, h('span', { class: 'muted small block' }, `${v.date_label}, in at ${v.in_label} with ${v.in_by.name}`)),
+            h('button', {
+              type: 'button', class: 'btn btn-quiet fix-time',
+              onclick: () => openFixVisit({ attempt, refresh, done: () => toast('Time fixed. The old time and the reason are kept.', { slot: $('#follow-up-status') }) },
+                { visitId: v.visit_id, childName: v.child.name, date: v.date, dateLabel: v.date_label, inLabel: v.in_label }),
+            }, 'Fix a time'))))
+          : h('p', { class: 'empty' }, 'No visit from an earlier day is left open.'),
+        status('follow-up-status'))),
   ]
 }
 

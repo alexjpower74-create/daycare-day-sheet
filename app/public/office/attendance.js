@@ -138,6 +138,34 @@ function openFix(ctx, child, date, day) {
   })
 }
 
+/** "Fix a time" for one visit left open (the office Today tab's Not signed out list): the sign-out date and time, and why. */
+export function openFixVisit(ctx, { visitId, childName, date, dateLabel, inLabel }) {
+  const status = h('div', { class: 'status-line' })
+  const form = h('form', { class: 'dialog-form', novalidate: true },
+    h('p', { class: 'muted' }, `${childName}, ${dateLabel}. In at ${inLabel}, never signed out.`),
+    h('div', { class: 'two-fields' },
+      field('Signed out, date', control('input', 'fix-out_date', 'out_date', { type: 'date' }, date)),
+      field('Signed out, time', control('input', 'fix-out_time', 'out_time', { type: 'time' }))),
+    h('p', { class: 'faint small' }, 'The old time, who changed it and why are kept.'),
+    field('Why', control('textarea', 'fix-reason', 'reason', { rows: '2', maxlength: '200' })),
+    status,
+    h('div', { class: 'btn-row' },
+      h('button', { type: 'submit', id: 'fix-save', class: 'btn btn-primary' }, 'Save the time'),
+      h('button', { type: 'button', class: 'btn btn-quiet', onclick: () => el.close() }, 'Cancel')))
+  const el = dialog('fix-dialog', 'Fix a time', form)
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault()
+    const v = (name) => form.elements.namedItem(name).value
+    const body = { reason: v('reason') }
+    if (v('out_time')) { body.out_date = v('out_date'); body.out_time = v('out_time') }
+    const r = await ctx.attempt(form, status, () => api.fixVisit(visitId, body))
+    if (!r) return
+    el.close()
+    await ctx.refresh()
+    if (ctx.done) ctx.done()
+  })
+}
+
 function openMarkAway(ctx, childId, date) {
   const status = h('div', { class: 'status-line' })
   const who = control('select', 'away-child_id', 'child_id', {})
