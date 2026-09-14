@@ -1,0 +1,18 @@
+{
+  "name": "daycare-day-sheet-worker",
+  "private": true,
+  "type": "module",
+  "description": "Daycare Day Sheet Worker: the API in docs/API.md on D1. No npm dependencies; uses the wrangler on PATH. Local only.",
+  "scripts": {
+    "test": "node tests/run.mjs",
+    "test:unit": "node tests/run.mjs --unit-only",
+    "dev": "wrangler d1 migrations apply daycare-day-sheet --local --persist-to .state-dev && wrangler dev --local --port 7802 --inspector-port 7812 --persist-to .state-dev",
+    "dev:test": "wrangler d1 migrations apply daycare-day-sheet --local --persist-to .state-dev && wrangler dev --local --port 7802 --inspector-port 7812 --persist-to .state-dev --var TEST_MODE:1",
+    "negative": "node tests/negative-all.mjs",
+    "negative:count": "node tests/negative-count.mjs",
+    "negative:limit": "node tests/negative-limit.mjs",
+    "negative:pickup": "node tests/negative-pickup.mjs",
+    "negative:expiry": "node tests/negative-expiry.mjs",
+    "negative:expiry-never": "node tests/negative-expiry-never.mjs"
+  }
+}

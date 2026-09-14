@@ -1,0 +1,480 @@
+
+=== negative:count — 2026-09-14T11:47:40.831Z
+break: loadMeters counts present children from kids.results.slice(0, -1): the child signed in last is not counted
+patched: src/db.js
+run: node tests/run.mjs --fresh --api-only --grep ^ratio moment (PORT 7805)
+== api: fresh Worker on http://127.0.0.1:7805 (state .state-7805)
+# tests 1
+# pass 0
+# fail 1
+not ok 1 - ratio moment: at the limit with the third infant, over with the fourth in that very answer; staff/today agrees; a second educator and leaving change it
+  ---
+  duration_ms: 209.593579
+  type: 'test'
+  location: 'worker/tests/api.test.mjs:159:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'No children in the room.'
+    - '1 child, 1 staff. Room for 2 more.'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '1 child, 1 staff. Room for 2 more.'
+  actual: 'No children in the room.'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://worker/tests/api.test.mjs:166:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    async Test.run (node:internal/test_runner/test:1409:7)
+RESULT: RED as intended (exit 1); red tests: ratio moment: at the limit with the third infant, over with the fourth in that very answer; staff/today agrees; a second educator and leaving change it
+
+=== negative:limit — 2026-09-14T11:47:43.929Z
+break: ratio.js row 5 compares children >= staff × per instead of >, so a room exactly at the limit reads over
+patched: src/ratio.js
+run: node tests/run.mjs --fresh --api-only --grep ^ratio moment (PORT 7805)
+== api: fresh Worker on http://127.0.0.1:7805 (state .state-7805)
+# tests 1
+# pass 0
+# fail 1
+not ok 1 - ratio moment: at the limit with the third infant, over with the fourth in that very answer; staff/today agrees; a second educator and leaving change it
+  ---
+  duration_ms: 247.022851
+  type: 'test'
+  location: 'worker/tests/api.test.mjs:159:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+    +   'over',
+    +   'Over',
+    -   'at_limit',
+    -   'At the limit',
+        3,
+        0,
+    +   '3 children, 1 staff. Over the ratio: 1 staff can have 3. Needs 0 more staff.'
+    -   '3 children, 1 staff. At the limit.'
+      ]
+    
+  code: 'ERR_ASSERTION'
+RESULT: RED as intended (exit 1); red tests: ratio moment: at the limit with the third infant, over with the fourth in that very answer; staff/today agrees; a second educator and leaving change it
+
+=== negative:pickup — 2026-09-14T11:47:47.001Z
+break: visits.js signOut drops "&& person.may_pick_up === 1": anyone active on the list may pick up
+patched: src/visits.js
+run: node tests/run.mjs --fresh --api-only --grep ^authorized pick-up (PORT 7805)
+== api: fresh Worker on http://127.0.0.1:7805 (state .state-7805)
+# tests 1
+# pass 0
+# fail 1
+not ok 1 - authorized pick-up: the neighbour, another child's parent and an unknown id are refused and Ava stays in; the grandmother signs her out
+  ---
+  duration_ms: 157.600236
+  type: 'test'
+  location: 'worker/tests/api.test.mjs:248:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 403
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 403
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://worker/tests/api.test.mjs:258:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+  ...
+RESULT: RED as intended (exit 1); red tests: authorized pick-up: the neighbour, another child's parent and an unknown id are refused and Ava stays in; the grandmother signs her out
+
+=== negative:expiry — 2026-09-14T11:47:50.058Z
+break: staff.js makeLink sets expires_at to UTC midnight after today (Date.parse(today) + 1 day) instead of endOfDate(today)
+patched: src/staff.js
+run: node tests/run.mjs --fresh --api-only --grep ^parent link: made at 9:00 PM (PORT 7805)
+== api: fresh Worker on http://127.0.0.1:7805 (state .state-7805)
+# tests 1
+# pass 0
+# fail 1
+not ok 1 - parent link: made at 9:00 PM NDT, still works at 11:59:59 PM NDT and shows a log added after it was made
+  ---
+  duration_ms: 182.721305
+  type: 'test'
+  location: 'worker/tests/api.test.mjs:519:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      {
+        date: '2026-09-14',
+    +   expires_at: '2026-09-15T00:00:00.000Z',
+    -   expires_at: '2026-09-15T02:30:00.000Z',
+        expires_label: 'Works until midnight tonight.',
+        token: 't',
+        url: '/note/?t=t'
+      }
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+RESULT: RED as intended (exit 1); red tests: parent link: made at 9:00 PM NDT, still works at 11:59:59 PM NDT and shows a log added after it was made
+
+=== negative:expiry-never — 2026-09-14T11:47:53.061Z
+break: staff.js parentNote skips the expires_at comparison (if (false)), so a link works forever
+patched: src/staff.js
+run: node tests/run.mjs --fresh --api-only --grep ^parent link: dead (PORT 7805)
+== api: fresh Worker on http://127.0.0.1:7805 (state .state-7805)
+# tests 1
+# pass 0
+# fail 1
+not ok 1 - parent link: dead at 12:00:00 AM NDT the next day (410 with the exact message), unknown token 404
+  ---
+  duration_ms: 172.66477
+  type: 'test'
+  location: 'worker/tests/api.test.mjs:546:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 410
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 410
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://worker/tests/api.test.mjs:550:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+  ...
+RESULT: RED as intended (exit 1); red tests: parent link: dead at 12:00:00 AM NDT the next day (410 with the exact message), unknown token 404
+
+=== negative:count — 2026-09-14T11:50:22.675Z
+break: loadMeters counts present children from kids.results.slice(0, -1): the child signed in last is not counted
+patched: src/db.js
+run: node tests/run.mjs --fresh --api-only --grep ^ratio moment (PORT 7805)
+== api: fresh Worker on http://127.0.0.1:7805 (state .state-7805)
+# tests 1
+# pass 0
+# fail 1
+not ok 1 - ratio moment: at the limit with the third infant, over with the fourth in that very answer; staff/today agrees; a second educator and leaving change it
+  ---
+  duration_ms: 198.735635
+  type: 'test'
+  location: 'worker/tests/api.test.mjs:159:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'No children in the room.'
+    - '1 child, 1 staff. Room for 2 more.'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '1 child, 1 staff. Room for 2 more.'
+  actual: 'No children in the room.'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (worker/tests/api.test.mjs:166:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    async Test.run (node:internal/test_runner/test:1409:7)
+RESULT: RED as intended (exit 1); red tests: ratio moment: at the limit with the third infant, over with the fourth in that very answer; staff/today agrees; a second educator and leaving change it
+
+=== negative:limit — 2026-09-14T11:50:25.679Z
+break: ratio.js row 5 compares children >= staff × per instead of >, so a room exactly at the limit reads over
+patched: src/ratio.js
+run: node tests/run.mjs --fresh --api-only --grep ^ratio moment (PORT 7805)
+== api: fresh Worker on http://127.0.0.1:7805 (state .state-7805)
+# tests 1
+# pass 0
+# fail 1
+not ok 1 - ratio moment: at the limit with the third infant, over with the fourth in that very answer; staff/today agrees; a second educator and leaving change it
+  ---
+  duration_ms: 271.824395
+  type: 'test'
+  location: 'worker/tests/api.test.mjs:159:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+    +   'over',
+    +   'Over',
+    -   'at_limit',
+    -   'At the limit',
+        3,
+        0,
+    +   '3 children, 1 staff. Over the ratio: 1 staff can have 3. Needs 0 more staff.'
+    -   '3 children, 1 staff. At the limit.'
+      ]
+    
+  code: 'ERR_ASSERTION'
+RESULT: RED as intended (exit 1); red tests: ratio moment: at the limit with the third infant, over with the fourth in that very answer; staff/today agrees; a second educator and leaving change it
+
+=== negative:pickup — 2026-09-14T11:50:28.759Z
+break: visits.js signOut drops "&& person.may_pick_up === 1": anyone active on the list may pick up
+patched: src/visits.js
+run: node tests/run.mjs --fresh --api-only --grep ^authorized pick-up (PORT 7805)
+== api: fresh Worker on http://127.0.0.1:7805 (state .state-7805)
+# tests 1
+# pass 0
+# fail 1
+not ok 1 - authorized pick-up: the neighbour, another child's parent and an unknown id are refused and Ava stays in; the grandmother signs her out
+  ---
+  duration_ms: 136.672827
+  type: 'test'
+  location: 'worker/tests/api.test.mjs:248:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 403
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 403
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (worker/tests/api.test.mjs:258:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+  ...
+RESULT: RED as intended (exit 1); red tests: authorized pick-up: the neighbour, another child's parent and an unknown id are refused and Ava stays in; the grandmother signs her out
+
+=== negative:expiry — 2026-09-14T11:50:31.690Z
+break: staff.js makeLink sets expires_at to UTC midnight after today (Date.parse(today) + 1 day) instead of endOfDate(today)
+patched: src/staff.js
+run: node tests/run.mjs --fresh --api-only --grep ^parent link: made at 9:00 PM (PORT 7805)
+== api: fresh Worker on http://127.0.0.1:7805 (state .state-7805)
+# tests 1
+# pass 0
+# fail 1
+not ok 1 - parent link: made at 9:00 PM NDT, still works at 11:59:59 PM NDT and shows a log added after it was made
+  ---
+  duration_ms: 185.20991
+  type: 'test'
+  location: 'worker/tests/api.test.mjs:519:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      {
+        date: '2026-09-14',
+    +   expires_at: '2026-09-15T00:00:00.000Z',
+    -   expires_at: '2026-09-15T02:30:00.000Z',
+        expires_label: 'Works until midnight tonight.',
+        token: 't',
+        url: '/note/?t=t'
+      }
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+RESULT: RED as intended (exit 1); red tests: parent link: made at 9:00 PM NDT, still works at 11:59:59 PM NDT and shows a log added after it was made
+
+=== negative:expiry-never — 2026-09-14T11:50:34.660Z
+break: staff.js parentNote skips the expires_at comparison (if (false)), so a link works forever
+patched: src/staff.js
+run: node tests/run.mjs --fresh --api-only --grep ^parent link: dead (PORT 7805)
+== api: fresh Worker on http://127.0.0.1:7805 (state .state-7805)
+# tests 1
+# pass 0
+# fail 1
+not ok 1 - parent link: dead at 12:00:00 AM NDT the next day (410 with the exact message), unknown token 404
+  ---
+  duration_ms: 185.86776
+  type: 'test'
+  location: 'worker/tests/api.test.mjs:546:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 410
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 410
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (worker/tests/api.test.mjs:550:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+  ...
+RESULT: RED as intended (exit 1); red tests: parent link: dead at 12:00:00 AM NDT the next day (410 with the exact message), unknown token 404
+
+=== negative:count — 2026-09-14T11:51:15.890Z
+break: loadMeters counts present children from kids.results.slice(0, -1): the child signed in last is not counted
+patched: src/db.js
+run: node tests/run.mjs --fresh --api-only --grep ^ratio moment (PORT 7805)
+== api: fresh Worker on http://127.0.0.1:7805 (state .state-7805)
+# tests 1
+# pass 0
+# fail 1
+not ok 1 - ratio moment: at the limit with the third infant, over with the fourth in that very answer; staff/today agrees; a second educator and leaving change it
+  ---
+  duration_ms: 190.701661
+  type: 'test'
+  location: 'worker/tests/api.test.mjs:159:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'No children in the room.'
+    - '1 child, 1 staff. Room for 2 more.'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '1 child, 1 staff. Room for 2 more.'
+  actual: 'No children in the room.'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (worker/tests/api.test.mjs:166:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    async Test.run (node:internal/test_runner/test:1409:7)
+RESULT: RED as intended (exit 1); red tests: ratio moment: at the limit with the third infant, over with the fourth in that very answer; staff/today agrees; a second educator and leaving change it
+
+=== negative:limit — 2026-09-14T11:51:18.823Z
+break: ratio.js row 5 compares children >= staff × per instead of >, so a room exactly at the limit reads over
+patched: src/ratio.js
+run: node tests/run.mjs --fresh --api-only --grep ^ratio moment (PORT 7805)
+== api: fresh Worker on http://127.0.0.1:7805 (state .state-7805)
+# tests 1
+# pass 0
+# fail 1
+not ok 1 - ratio moment: at the limit with the third infant, over with the fourth in that very answer; staff/today agrees; a second educator and leaving change it
+  ---
+  duration_ms: 226.455287
+  type: 'test'
+  location: 'worker/tests/api.test.mjs:159:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+    +   'over',
+    +   'Over',
+    -   'at_limit',
+    -   'At the limit',
+        3,
+        0,
+    +   '3 children, 1 staff. Over the ratio: 1 staff can have 3. Needs 0 more staff.'
+    -   '3 children, 1 staff. At the limit.'
+      ]
+    
+  code: 'ERR_ASSERTION'
+RESULT: RED as intended (exit 1); red tests: ratio moment: at the limit with the third infant, over with the fourth in that very answer; staff/today agrees; a second educator and leaving change it
+
+=== negative:pickup — 2026-09-14T11:51:21.733Z
+break: visits.js signOut drops "&& person.may_pick_up === 1": anyone active on the list may pick up
+patched: src/visits.js
+run: node tests/run.mjs --fresh --api-only --grep ^authorized pick-up (PORT 7805)
+== api: fresh Worker on http://127.0.0.1:7805 (state .state-7805)
+# tests 1
+# pass 0
+# fail 1
+not ok 1 - authorized pick-up: the neighbour, another child's parent and an unknown id are refused and Ava stays in; the grandmother signs her out
+  ---
+  duration_ms: 139.831081
+  type: 'test'
+  location: 'worker/tests/api.test.mjs:248:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 403
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 403
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (worker/tests/api.test.mjs:258:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+  ...
+RESULT: RED as intended (exit 1); red tests: authorized pick-up: the neighbour, another child's parent and an unknown id are refused and Ava stays in; the grandmother signs her out
+
+=== negative:expiry — 2026-09-14T11:51:24.584Z
+break: staff.js makeLink sets expires_at to UTC midnight after today (Date.parse(today) + 1 day) instead of endOfDate(today)
+patched: src/staff.js
+run: node tests/run.mjs --fresh --api-only --grep ^parent link: made at 9:00 PM (PORT 7805)
+== api: fresh Worker on http://127.0.0.1:7805 (state .state-7805)
+# tests 1
+# pass 0
+# fail 1
+not ok 1 - parent link: made at 9:00 PM NDT, still works at 11:59:59 PM NDT and shows a log added after it was made
+  ---
+  duration_ms: 168.606938
+  type: 'test'
+  location: 'worker/tests/api.test.mjs:519:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      {
+        date: '2026-09-14',
+    +   expires_at: '2026-09-15T00:00:00.000Z',
+    -   expires_at: '2026-09-15T02:30:00.000Z',
+        expires_label: 'Works until midnight tonight.',
+        token: 't',
+        url: '/note/?t=t'
+      }
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+RESULT: RED as intended (exit 1); red tests: parent link: made at 9:00 PM NDT, still works at 11:59:59 PM NDT and shows a log added after it was made
+
+=== negative:expiry-never — 2026-09-14T11:51:27.438Z
+break: staff.js parentNote skips the expires_at comparison (if (false)), so a link works forever
+patched: src/staff.js
+run: node tests/run.mjs --fresh --api-only --grep ^parent link: dead (PORT 7805)
+== api: fresh Worker on http://127.0.0.1:7805 (state .state-7805)
+# tests 1
+# pass 0
+# fail 1
+not ok 1 - parent link: dead at 12:00:00 AM NDT the next day (410 with the exact message), unknown token 404
+  ---
+  duration_ms: 170.372452
+  type: 'test'
+  location: 'worker/tests/api.test.mjs:546:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 410
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 410
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (worker/tests/api.test.mjs:550:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+  ...
+RESULT: RED as intended (exit 1); red tests: parent link: dead at 12:00:00 AM NDT the next day (410 with the exact message), unknown token 404
