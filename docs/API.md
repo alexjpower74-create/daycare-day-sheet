@@ -105,7 +105,7 @@ A room of other mixed ages uses the youngest child's group (s.54(9)); the office
 | 1 | `children = 0` | `ok` | `OK` | `No children in the room.` | 0 |
 | 2 | either number is null | `unset` | `Not set` | `Ratio not set. A supervisor fills it in under Office, Rooms and ratios.` | null |
 | 3 | `staff = 0` | `over` | `Over` | `{C} with no staff in the room.` | `ceil(children / per)` if `children ≤ max`, else null |
-| 4 | `children > max_children` | `over` | `Over` | `{C}, {S}. Over the most this room can hold (max).` | null |
+| 4 | `children > max_children` | `over` | `Over` | `{C}, {S}. Over the most this room can hold ({max_children}).` | null |
 | 5 | `children > staff × per` | `over` | `Over` | `{C}, {S}. Over the ratio: {S} can have {staff × per}. Needs {k} more staff.` | `k = ceil(children / per) − staff` |
 | 6 | `children = allowed` | `at_limit` | `At the limit` | `{C}, {S}. At the limit.` | 0 |
 | 7 | otherwise | `ok` | `OK` | `{C}, {S}. Room for {allowed − children} more.` | 0 |
@@ -127,7 +127,8 @@ the pages show red at once.
 - **Signature** (in): `{ "w": 600, "h": 200, "strokes": [[x0, y0, x1, y1, …], …] }`, integers inside the box, 1–50 strokes,
   each at least 2 points (4 numbers, even length), 4 000 points in all at most, and the ink must span at least 20 units across
   or down. Otherwise 400 `field: "signature"` `"Please sign with your finger."`. Out: `signature_svg`, a string the Worker builds
-  from the integers only: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 200"><path d="M… L…"/></svg>`.
+  from the integers only: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 200"><path d="M… L…" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+  (the attributes are part of the contract, so a signature draws as ink with no page CSS and prints in the text colour).
 - **Visit**: `{ id, child_id, date, in_at, in_label, in_by: {id, name, relationship}, in_signature_svg|null, in_recorded_by|null,
   out_at|null, out_label|null, out_by|null, out_signature_svg|null, out_recorded_by|null, awaiting_signature ("in"|"out"|null),
   edited, edits: [{ at_label, by, reason, what }] }` — `*_recorded_by` is `{ id, initials }` of the staff member who recorded it

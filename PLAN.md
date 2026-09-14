@@ -152,6 +152,7 @@ Owns:
 - worker/**
 - app/public/door/**
 - app/tests/door/**
+- docs/build-report-dd1.md
 
 Report: docs/build-report-dd1.md
 
@@ -181,7 +182,7 @@ educator on an office route → 403 (route may 404 until M2; then 403), no token
 → 429 then even the right one 429 (a different `X-Test-IP` still works); `GET /api/door/children` statuses on Mon Sep 14 (Isla
 `not_booked`, everyone else `not_in_yet`); **the ratio moment**: Marie into the infant room, sign in Ava, Liam, Nora → the third answer's
 meter is `at_limit`; sign in Owen → **that very answer's meter** is `over` with `needs_staff` 1 and the exact label, and
-`GET /api/staff/today` agrees; Kevin also into the infant room → `at_limit` again; Marie out → over; **the move**: moving a child from
+`GET /api/staff/today` agrees; Kevin also into the infant room → `ok` ("4 children, 2 staff. Room for 2 more."); Marie out → over; **the move**: moving a child from
 the infant room to the toddler room changes both meters in one answer; 0 staff with one child → over; a ratio rule edited to null
 through a test-only path you document (or `PUT /api/office/ratios` once M2 lands) → `unset`; **authorized pick-up**: sign out Ava by
 `p_ava_neighbour` → 403 `not_on_list` with the exact message and the visit is still open (`GET /api/door/children/c_ava` status `in`);
@@ -259,6 +260,7 @@ Owns:
 - app/public/note/**
 - app/public/office/**
 - app/tests/web/**
+- docs/build-report-dd2.md
 
 Report: docs/build-report-dd2.md
 
