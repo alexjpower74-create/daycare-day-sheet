@@ -12,6 +12,7 @@ const DAYS = [['mon', 'Mon'], ['tue', 'Tue'], ['wed', 'Wed'], ['thu', 'Thu'], ['
 const MIXED_AGES = 'A room of other mixed ages uses the youngest child\'s group (NLR 39/17 s.54(9)).'
 
 let info = null
+let infoError = null
 let tab = 'today'
 try { const saved = sessionStorage.getItem(TAB_KEY); if (TABS.some(([k]) => k === saved)) tab = saved } catch { /* no storage */ }
 const attendanceState = { view: 'week', anchor: null }
@@ -31,8 +32,11 @@ function closeDialogs() {
 async function loadInfo() {
   try {
     info = await api.info()
+    infoError = null
     applyCentre(info)
-  } catch { /* the header keeps its text */ }
+  } catch (e) {
+    infoError = e // Attendance needs today's date from here and says so when it is missing
+  }
 }
 
 function signIn(message) {
@@ -131,11 +135,25 @@ async function select(key, { refresh: again = false } = {}) {
     children: showChildren,
     rooms: showRooms,
     staff: showStaff,
-    attendance: () => showAttendance({ today: info?.today, state: attendanceState, attempt, refresh }),
+    attendance: async () => {
+      if (!info?.today) await loadInfo()
+      if (!info?.today) return attendanceUnavailable()
+      return showAttendance({ today: info.today, state: attendanceState, attempt, refresh })
+    },
   }
   const nodes = await builders[key]()
   if (seq !== renderSeq || nodes == null || !$('#office-panel')) return
   $('#office-panel').replaceChildren(...[nodes].flat(Infinity).filter(Boolean))
+}
+
+/** Attendance cannot work out its dates without /api/info: say why in its status line, never sit on "Loading…". */
+function attendanceUnavailable() {
+  const message = infoError?.message || 'Could not read today\'s date from the centre\'s server. Try again.'
+  return [
+    title('Attendance'),
+    h('div', { class: 'status-line', id: 'attendance-status' }, h('p', { id: 'attendance-error', class: 'field-error', role: 'alert' }, message)),
+    h('div', { class: 'btn-row' }, h('button', { type: 'button', id: 'attendance-retry', class: 'btn btn-outline', onclick: () => refresh() }, 'Try again')),
+  ]
 }
 
 const title = (text, sub) => h('div', { class: 'office-head' }, h('h1', { class: 'office-title' }, text), sub ? h('p', { class: 'muted' }, sub) : null)
