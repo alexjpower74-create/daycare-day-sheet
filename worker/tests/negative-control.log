@@ -1257,3 +1257,38 @@ not ok 1 - info before the centre row exists: centre_name "", phone "", sample f
     0: ''
     1: ''
 RESULT: RED as intended (exit 1); red tests: info before the centre row exists: centre_name "", phone "", sample false; a reset then makes it the SAMPLE centre
+
+=== negative:homeroom — 2026-09-14T13:20:12.785Z
+break: office.js parseChild no longer keeps an unchanged home room: a closed room is refused even for the child already in it
+patched: src/office.js
+run: node tests/run.mjs --fresh --api-only --grep ^children: an edit that sends back the home room (PORT 7805)
+== api: fresh Worker on http://127.0.0.1:7805 (state .state-7805)
+# tests 1
+# pass 1
+# fail 0
+# tests 2
+# pass 1
+# fail 1
+not ok 1 - children: an edit that sends back the home room of a closed room is saved; moving a child into a closed room is still refused
+  ---
+  duration_ms: 160.940115
+  type: 'test'
+  location: 'worker/tests/api-m2.test.mjs:85:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"error":"Pick a room that is open.","code":"bad_request","field":"home_room_id"}
+    
+    400 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 400
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (worker/tests/api-m2.test.mjs:92:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+  ...
+RESULT: RED as intended (exit 1); red tests: children: an edit that sends back the home room of a closed room is saved; moving a child into a closed room is still refused

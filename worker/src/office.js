@@ -73,8 +73,11 @@ async function parseChild(c, b, current) {
     out.dob = b.dob
   }
   if (asked('home_room_id')) {
+    // A child keeps the home room they already have even after it closes, so an edit that sends it back unchanged (the office
+    // form always does) still saves. Moving a child into a closed room is refused.
+    const keep = current !== null && b.home_room_id === current.home_room_id
     const room = typeof b.home_room_id === 'string'
-      ? await c.db.prepare('SELECT id FROM rooms WHERE id = ? AND active = 1').bind(b.home_room_id).first() : null
+      ? await c.db.prepare('SELECT id FROM rooms WHERE id = ? AND (active = 1 OR ? = 1)').bind(b.home_room_id, keep ? 1 : 0).first() : null
     if (!room) throw bad('home_room_id', 'Pick a room that is open.')
     out.home_room_id = room.id
   }

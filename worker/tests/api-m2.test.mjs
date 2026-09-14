@@ -82,6 +82,18 @@ test('children: home_room_id is an open room', async () => {
   for (const home of ['r_attic', 7, undefined, spare.body.room.id]) refused(await postChild({ ...GOOD_CHILD, home_room_id: home }), 'home_room_id')
 })
 
+test('children: an edit that sends back the home room of a closed room is saved; moving a child into a closed room is still refused', async () => {
+  const dana = await sup()
+  const spare = (await call('POST', '/api/office/rooms', { token: dana, body: { name: 'Spare room', age_group: 'infant' } })).body.room
+  const kid = (await call('POST', '/api/office/children', { token: dana, body: { ...GOOD_CHILD, home_room_id: spare.id } })).body.child
+  assert.equal((await call('PUT', `/api/office/rooms/${spare.id}`, { token: dana, body: { active: false } })).status, 200)
+  // What the office form sends: every field, the home room unchanged.
+  const kept = await call('PUT', `/api/office/children/${kid.id}`, { token: dana, body: { ...GOOD_CHILD, name: 'Nell R. (SAMPLE)', home_room_id: spare.id } })
+  assert.equal(kept.status, 200, JSON.stringify(kept.body))
+  assert.deepEqual([kept.body.child.name, kept.body.child.home_room_id], ['Nell R. (SAMPLE)', spare.id])
+  refused(await call('PUT', '/api/office/children/c_ava', { token: dana, body: { home_room_id: spare.id } }), 'home_room_id')
+})
+
 test('children: schedule is full_time or part_time', async () => {
   for (const schedule of ['weekends', '', undefined]) refused(await postChild({ ...GOOD_CHILD, schedule }), 'schedule')
   assert.equal((await postChild({ ...GOOD_CHILD, schedule: 'full_time' })).status, 201)
