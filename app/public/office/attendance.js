@@ -76,7 +76,14 @@ function cell(ctx, child, date, day) {
     }
     return nodes
   }
-  if (day.status === 'away') return h('span', { class: 'chip chip-away' }, `Away: ${reasonLabel(day.absence)}`)
+  if (day.status === 'away') {
+    return [
+      h('span', { class: 'chip chip-away' }, `Away: ${reasonLabel(day.absence)}`),
+      day.absence?.id
+        ? h('button', { type: 'button', class: 'btn btn-quiet remove-absence', 'aria-label': `Remove the absence for ${when}`, onclick: (e) => removeAbsence(ctx, day.absence, e.currentTarget) }, 'Remove')
+        : null,
+    ]
+  }
   if (day.status === 'missing') {
     return h('button', { type: 'button', class: 'cell-btn cell-missing', 'aria-label': `No record. Mark ${when} away`, onclick: () => openMarkAway(ctx, child.id, date) }, 'No record')
   }
@@ -100,9 +107,25 @@ function control(tag, id, name, attrs = {}, value = '') {
   return el
 }
 
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+/**
+ * The date one end of a visit is on. A part's label carries the other date when that end is not on the cell's date
+ * ("10:30 PM Sep 14" in the Sep 15 cell, API.md), so the fix sends the visit's own dates, never the cell's.
+ */
+export function endDate(label, cellDate) {
+  const m = /\s([A-Z][a-z]{2}) (\d{1,2})$/.exec(label || '')
+  const month = m ? MONTHS_SHORT.indexOf(m[1]) + 1 : 0
+  if (!month) return cellDate
+  let [year, cellMonth] = cellDate.split('-').map(Number)
+  if (month - cellMonth > 6) year -= 1 // Dec 31 shown in a Jan 1 cell
+  if (cellMonth - month > 6) year += 1 // Jan 1 shown in a Dec 31 cell
+  return `${year}-${String(month).padStart(2, '0')}-${String(Number(m[2])).padStart(2, '0')}`
+}
+
 function openFix(ctx, child, date, day) {
   const parts = day.parts || []
   const open = parts.find((p) => !p.out_label)
+  const first = open || parts[0]
   const choose = parts.length > 1
     ? control('select', 'fix-part', 'part', {}, '')
     : null
@@ -114,10 +137,10 @@ function openFix(ctx, child, date, day) {
     h('p', { class: 'muted' }, `${child.name}, ${dayLabel(date)}.`),
     choose ? field('Which visit', choose) : h('p', {}, parts[0] ? `In ${parts[0].in_label}, out ${parts[0].out_label || 'not signed out'}.` : ''),
     h('div', { class: 'two-fields' },
-      field('Signed in, date', control('input', 'fix-in_date', 'in_date', { type: 'date' }, date)),
+      field('Signed in, date', control('input', 'fix-in_date', 'in_date', { type: 'date' }, endDate(first?.in_label, date))),
       field('Signed in, time', control('input', 'fix-in_time', 'in_time', { type: 'time' }))),
     h('div', { class: 'two-fields' },
-      field('Signed out, date', control('input', 'fix-out_date', 'out_date', { type: 'date' }, date)),
+      field('Signed out, date', control('input', 'fix-out_date', 'out_date', { type: 'date' }, first?.out_label ? endDate(first.out_label, date) : date)),
       field('Signed out, time', control('input', 'fix-out_time', 'out_time', { type: 'time' }))),
     h('p', { class: 'faint small' }, 'Fill in only the time that is wrong. The old time, who changed it and why are kept.'),
     field('Why', control('textarea', 'fix-reason', 'reason', { rows: '2', maxlength: '200' })),
@@ -126,6 +149,11 @@ function openFix(ctx, child, date, day) {
       h('button', { type: 'submit', id: 'fix-save', class: 'btn btn-primary' }, 'Save the time'),
       h('button', { type: 'button', class: 'btn btn-quiet', onclick: () => el.close() }, 'Cancel')))
   const el = dialog('fix-dialog', 'Fix a time', form)
+  choose?.addEventListener('change', () => {
+    const p = parts[Number(choose.value)]
+    form.elements.namedItem('in_date').value = endDate(p.in_label, date)
+    form.elements.namedItem('out_date').value = p.out_label ? endDate(p.out_label, date) : date
+  })
   form.addEventListener('submit', async (e) => {
     e.preventDefault()
     const part = choose ? parts[Number(choose.value)] : parts[0]
@@ -194,6 +222,16 @@ function openMarkAway(ctx, childId, date) {
     await ctx.refresh()
     toast(`Marked away: ${r.absence.reason_label}.`, { slot: $('#attendance-status') })
   })
+}
+
+/** A mistaken absence comes off with DELETE /api/office/absences/:id; the table re-reads, so the cell shows what the Worker kept. */
+async function removeAbsence(ctx, absence, btn) {
+  btn.disabled = true
+  const r = await ctx.attempt(null, $('#attendance-status'), () => api.removeAbsence(absence.id))
+  if (btn.isConnected) btn.disabled = false
+  if (!r) return
+  await ctx.refresh()
+  toast(`Removed: away (${reasonLabel(absence)}).`, { slot: $('#attendance-status') })
 }
 
 async function download(path, btn, ctx) {

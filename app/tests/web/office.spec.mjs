@@ -187,3 +187,18 @@ test('Today follows up from the API: a pending signature for a child who went ho
   expect(after.not_signed_out).toEqual([])
   expect(after.pending_signatures.map((p) => p.child.id)).toEqual(['c_liam'])
 })
+
+// dd1's cross-review of the office, item 7: a failed /api/info must not leave Attendance on "Loading…".
+test('if /api/info fails, Attendance shows the error in its status line instead of Loading…, and Try again recovers', async ({ page, context }) => {
+  const message = 'The centre\'s server had a problem. Try again in a moment.'
+  const failInfo = (route) => route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: message, code: 'server_error' }) })
+  await context.route('**/api/info', failInfo)
+  await officeSignIn(page)
+  await openTab(page, 'Attendance')
+  await expect(page.locator('#attendance-status [role="alert"]'), 'the error in the status line').toHaveText(message)
+  await expect(page.locator('#office-panel')).not.toContainText('Loading…')
+  await context.unroute('**/api/info', failInfo)
+  await tap(page, page.locator('#attendance-retry'), 'Try again')
+  await expect(page.locator('#attendance-table')).toBeVisible()
+  await expect(page.locator('#attendance-status [role="alert"]')).toHaveCount(0)
+})

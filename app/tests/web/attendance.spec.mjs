@@ -62,7 +62,7 @@ test('the Week view splits a visit across midnight and its totals match the API'
   await expect(page.locator('#attendance-total')).toHaveText(minutesLabel(data.totals.minutes))
   await expect(page.locator('#attendance-child-days')).toHaveText(String(data.totals.child_days))
   await expect(cell(page, 'c_liam', FROM)).toHaveText('8 h')
-  await expect(cell(page, 'c_jack', '2026-09-15')).toHaveText('Away: Holiday')
+  await expect(cell(page, 'c_jack', '2026-09-15').locator('.chip-away')).toHaveText('Away: Holiday')
   // Missing (booked, on or before today) vs upcoming (booked, after today) vs not booked.
   const liam = data.children.find((c) => c.id === 'c_liam')
   expect([liam.days['2026-09-15'].status, liam.days['2026-09-17'].status, liam.days['2026-09-19'].status]).toEqual(['missing', 'upcoming', 'not_booked'])
@@ -105,7 +105,7 @@ test('Mark away with a reason shows Away: Sick', async ({ page, request }) => {
   await type(page, dialog.locator('input[name="note"]'), 'Fever')
   await tap(page, dialog.locator('#away-save'), 'Mark away (save)')
   await expect(dialog).toHaveCount(0)
-  await expect(cell(page, 'c_owen', '2026-09-16')).toHaveText('Away: Sick')
+  await expect(cell(page, 'c_owen', '2026-09-16').locator('.chip-away')).toHaveText('Away: Sick')
   const data = (await api(request, 'GET', `/api/office/attendance?from=${FROM}&to=${TO}`, undefined, bearer(office), { now: PAGE_NOW })).body
   expect(data.children.find((c) => c.id === 'c_owen').days['2026-09-16']).toMatchObject({ status: 'away', absence: { reason: 'sick', note: 'Fever' } })
 })
@@ -145,4 +145,50 @@ test('today\'s open visit reads Still here with no flag and no Fix a time; an ea
   await expect(earlier).toContainText('Not signed out')
   await expect(earlier.getByRole('button', { name: /Fix a time/ })).toHaveCount(1)
   await expect(earlier).not.toContainText('Still here')
+})
+
+// dd1's cross-review of the office, item 5: the second day of an overnight visit must fix the visit's own sign-in date.
+test('Fix a time from the second day of an overnight visit sends the visit\'s own dates', async ({ page, request }) => {
+  await setUp(request)
+  await openAttendance(page)
+  const secondDay = cell(page, 'c_ava', '2026-09-15')
+  await expect(secondDay).toHaveText('1 h 15 min')
+  await tap(page, secondDay.locator('.fix-time'), 'Ava Sep 15: Fix a time')
+  const dialog = page.locator('#fix-dialog')
+  await expect(dialog.locator('input[name="in_date"]'), 'the visit\'s own sign-in date').toHaveValue('2026-09-14')
+  await expect(dialog.locator('input[name="out_date"]'), 'the visit\'s own sign-out date').toHaveValue('2026-09-15')
+  await dialog.locator('input[name="in_time"]').fill('22:00')
+  await type(page, dialog.locator('textarea[name="reason"]'), 'Arrived at 10:00 PM; the tablet was slow.')
+  const answer = page.waitForResponse((r) => r.url().includes('/api/office/visits/') && r.request().method() === 'PUT')
+  await tap(page, dialog.locator('#fix-save'), 'Save the time')
+  const response = await answer
+  expect(response.status(), 'fix from the Sep 15 cell answers 200').toBe(200)
+  const { visit } = await response.json()
+  expect([visit.date, visit.in_at, visit.out_at]).toEqual(['2026-09-14', at('2026-09-14T22:00:00-02:30'), at('2026-09-15T01:15:00-02:30')])
+  await expect(dialog).toHaveCount(0)
+  await expect(cell(page, 'c_ava', '2026-09-14')).toHaveText('2 h')
+  await expect(secondDay).toHaveText('1 h 15 min')
+})
+
+// dd1's cross-review of the office, item 6: a mistaken absence can be removed.
+test('Remove takes a mistaken absence off: the cell and the API are both clear', async ({ page, request }) => {
+  const { office } = await setUp(request)
+  await openAttendance(page)
+  await tap(page, page.locator('#mark-away'), 'Mark away')
+  const dialog = page.locator('#away-dialog')
+  await dialog.locator('select[name="child_id"]').selectOption('c_owen')
+  await dialog.locator('input[name="date"]').fill('2026-09-16')
+  await dialog.locator('select[name="reason"]').selectOption('sick')
+  await tap(page, dialog.locator('#away-save'), 'Mark away (save)')
+  const owen = cell(page, 'c_owen', '2026-09-16')
+  await expect(owen.locator('.chip-away')).toHaveText('Away: Sick')
+  const attendance = async () => (await api(request, 'GET', `/api/office/attendance?from=${FROM}&to=${TO}`, undefined, bearer(office), { now: PAGE_NOW })).body
+  expect((await attendance()).children.find((c) => c.id === 'c_owen').days['2026-09-16'].status).toBe('away')
+
+  await tap(page, owen.getByRole('button', { name: /Remove the absence/ }), 'Remove the absence')
+  await expect(owen.locator('.chip-away'), 'the away chip after Remove').toHaveCount(0)
+  await expect(owen, 'booked today with nothing recorded').toHaveText('No record')
+  await expect(page.locator('#attendance-status')).toContainText('Removed: away (Sick).')
+  const day = (await attendance()).children.find((c) => c.id === 'c_owen').days['2026-09-16']
+  expect([day.status, day.absence]).toEqual(['missing', null])
 })

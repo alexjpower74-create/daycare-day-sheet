@@ -392,3 +392,79 @@ I merged `main` first (fc8f63f: `sample` is `false` before the centre row exists
 ### Suite
 
 After item 2: **126 passed, 6 skipped, 0 failed**. After item 3: **134 passed, 6 skipped, 0 failed** in chromium and webkit at 390 and 1280. The skips are the same deliberate ones as last round. Negative controls (a)–(g): 7 of 7 red as intended. Every server I started is stopped.
+
+## Cross-review of dd1 door (2026-09-14, read only)
+
+Read at `main` merged into rig/dd2 (bd82cd9): `app/public/door/door.js`, `door-api.js`, `pad.js` and `index.html`, against docs/API.md. I edited none of dd1's files. I did not run dd1's door suite (QA runs it). Each finding below comes with a test that would fail today.
+
+**Routes, bodies and core handling are right.** `door-api.js:52-63`:
+- unlock `{ pin }` without a token; children and child with the token
+- in and out `{ person_id, signature }`
+- sign `{ which, person_id, signature }` on `/api/door/visits/:id/sign`
+
+A 401 forgets the token (`door-api.js:45`) and every caller goes back to "Set up this tablet" (`door.js:39`, `:149`, `:344`). The API's `error` text is shown as it is, in a `role="alert"` line on the sheet (`door.js:226`, `:345`), so the 403 `not_on_list` pick-up text ("… Do not let Ava M. (SAMPLE) leave.") reaches the parent word for word. The rest also matches the contract:
+- sign out is offered only when `status === 'in'` (`:262`)
+- the pick-up list keeps only `may_pick_up` people (`:284`)
+- the card chip reads the list's boolean `awaiting_signature` (`:107`), and the sheet uses the detail's `pending` with the API's labels (`:268-277`)
+- the pad keeps integers in 600 × 200, drops one-point strokes, caps 50 strokes and 4 000 points, and needs a 20-unit span (`pad.js:19`, `:54`, `:64`, `:71`)
+- the over banner comes from `meter.state` (`door.js:371`)
+- the idle timer is 45 s and the confirmation closes after 6 s
+
+### Findings
+
+1. **After a 409 the sheet keeps offering the same refused write** (medium).
+   - Where: `door.js:343-347`. On any error other than 401, the page shows the text and re-enables Done on the pad step.
+   - Expected: `already_in`, `not_in` and `bad_state` mean the child changed on another device (another tablet, or staff recording on a phone). The sheet should re-read `GET /api/door/children/:id` and go back to its first step with the API's text, so Sign in turns into Sign out.
+   - Got: every retry sends the same write and gets the same 409, until Back or the 45-second idle.
+   - Test that fails: open Ava's sheet while she is "Not in yet", sign her in through the API, then on the tablet tap Sign in → a person → draw → Done. Expect the API's "already signed in" text in `role="alert"` **and** `#action-out` visible without closing the sheet. Today `#action-out` never appears.
+2. **A guessed centre name and SAMPLE badge before `/api/info` answers** (contract, the same rule the lead had dd2 fix).
+   - Where: `door/index.html:6` (title) and `:13-14` hard-code "SAMPLE Little Harbour Child Care (demo)" with the badge visible. `door.js:48-49` overwrites them only after `/api/info` succeeds, and hides the badge only when `sample === false`. `door.js:174` in the sheet shows the badge when `info` is still null.
+   - Expected (API.md): the name is exactly `centre_name` (empty before setup), and the badge shows only when `sample` is `true`.
+   - Got: with `/api/info` failing, or before it loads, the tablet shows the SAMPLE name and badge. The title always does.
+   - Test that fails: route `/api/info` to a 500 (or use a second Worker with no centre row, as in dd2's `centre-name.spec`), open `/door/`, and expect `#centre-name` to be `""`, no visible `.sample-badge`, and no "Little Harbour" in the title.
+3. **A failed `/api/info` also stops the child grid from updating** (low).
+   - Where: `door.js:32` fetches `info` and `children` together in one `Promise.all`, so an info failure throws away a good children answer and shows the offline line.
+   - Expected: the grid still refreshes from `GET /api/door/children`; only the date and clock lines wait for info.
+   - Test that fails: open `/door/` set up, route `/api/info` to 500, sign Ava in through the API, wait one poll (15 s, advanced with `page.clock`), and expect Ava's card `data-status="in"`. Today it stays "not_in_yet".
+
+Nothing else in these files breaks against the contract as written.
+
+## Last round: items 5–7 (2026-09-14)
+
+I merged `main` first (bd82cd9). dd1's office cross-review had 7 findings. I had already fixed 1–3. dd1 fixed 4 on the Worker, so the page needs no change. 5–7 are below, each committed separately and each shown red without its change.
+
+### 5. Fix a time on an overnight visit — DONE (2fdd994)
+
+- **The bug** (`office/attendance.js`): the dialog pre-filled `in_date` and `out_date` with the cell's date. From Sep 15's "Continued from the day before" cell, a new in time was sent as Sep 15 and refused.
+- **The fix:** each end's date now comes from the part's own label. A label names the other date when that end is not on the cell's date ("10:30 PM Sep 14"), and the year comes from the cell, with a December/January crossing handled. Choosing another part in the dialog updates both dates.
+- **Spec** (`attendance.spec`): Ava is in from 10:30 PM Sep 14 to 1:15 AM Sep 15. Fix a time from the Sep 15 cell pre-fills 2026-09-14 and 2026-09-15; the in time is fixed to 22:00. The PUT answers 200 with `date` 2026-09-14 and `in_at` 10:00 PM Sep 14, and the Sep 14 cell reads "2 h".
+- **Negative control (h)** `negative-overnight-fix.mjs`: the copy pre-fills the cell's date. Red as intended: `the visit's own sign-in date · Expected "2026-09-14" · Received "2026-09-15"`.
+  - My first run named the later 200 check as the intended failure. The copy was caught one check earlier, at the pre-fill, so the script ruled "RED but not for the intended reason".
+  - The marker now names the pre-fill check. Both runs are in `negative-control.log`.
+
+### 6. Remove a mistaken absence — DONE (ed58dc7)
+
+- **The change:** the away chip gets Remove (`DELETE /api/office/absences/:id` through `api.removeAbsence`). The table re-reads, and the status line says "Removed: away (Sick)."
+- **Spec:** mark Owen away (sick), Remove. The cell reads "No record" with no away chip, and the API day is `missing` with `absence: null`. The two older checks now read the chip, since the cell also holds Remove.
+- **Proof:** red against HEAD's `attendance.js` in chromium-390 and webkit-1280 (no Remove button).
+
+### 7. A failed `/api/info` no longer leaves Attendance on "Loading…" — DONE (ac5a600)
+
+- **The change** (`office.js`): the failure is now kept. Attendance reads `/api/info` again first, and if that fails too it shows the API's error in `#attendance-status` (`role="alert"`) with "Try again".
+- **Spec** (`office.spec`): `/api/info` routed to a 500 shows the message, and "Loading…" is gone. Unrouted, Try again reaches the table.
+- **Proof:** red against HEAD's `office.js` in chromium-390 and webkit-1280 (the message is never shown).
+
+### Suite
+
+`E2E_PORT=7803 npx playwright test tests/web`: **146 passed, 6 skipped, 0 failed** in chromium and webkit at 390 and 1280. The skips are the same deliberate ones as before.
+- **Negative controls:** (h) is new this round and red as intended. (a)–(g) are unchanged since they were last shown red, and `negative-all.mjs` runs all eight.
+- **Door cross-review:** the section above this one.
+- **Servers:** every server I started is stopped.
+
+### A guard refusal during the final commits — explained, and passing after the merge
+
+While committing items 6 and 7 and this report, `rig guard --agent dd2` printed REFUSED. It listed PLAN.md, dd1's and the lead's reports, and `worker/src` and `worker/tests` files. My script showed only the guard's last line and did not stop on its exit code, so the commits went ahead. None of those files was in them.
+- **Per commit** (`git show --name-only`): 2fdd994, ed58dc7, ac5a600 and bdc7211 touch only `app/public/office/*`, `app/tests/web/*` and this report.
+- **The cause:** main had moved past my last merge (the lead merged round 5 as 14be111). The branch then had two merge bases (6211efc and d75a86f), and the comparison with main counted the other slices' files that came in through that merge.
+- **After `git merge main`** (9101c07): one merge base, guard `ok dd2: 13 file(s), all inside slice (vs main)` with exit 0, and no path outside dd2's in `git diff main...HEAD`.
+- **Lesson for my scripts:** check the guard's exit code before committing, not just its last line.
