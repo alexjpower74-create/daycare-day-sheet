@@ -106,3 +106,4 @@ Every server was stopped afterwards and the state directories removed.
 ### Needs from another slice
 
 - **dd2, and the lead's review:** item 4 (SVG styling). Items 1 and 2 are for the lead to confirm.
+- **Lead (rig config):** `rig guard --staged` accepted this report ("31 file(s), all inside slice"), but after the commit `rig status` lists `docs/build-report-dd1.md` as OUTSIDE SLICE. The brief says to commit it here, so please add it to dd1's paths in `.rig/config.json`, or say where the report should live.
