@@ -1,0 +1,71 @@
+// Printable daily register (NLR 39/17 s.45) against the real Worker: children, a drawn SVG signature per signed end, the moves
+// line, "Recorded by … signature needed", "Changed by …", the kept note, and print media hiding the navigation.
+import { test, expect } from '@playwright/test'
+import { at, fresh, assertNoThirdParty, tap, keypad, api, bearer, signInViaApi, signOutViaApi, shot, SUPERVISOR_PIN, EDUCATOR_PIN } from '../helpers.mjs'
+
+const PAGE_NOW = at('2026-09-14T17:00:00-02:30')
+const t = (hhmm) => at(`2026-09-14T${hhmm}:00-02:30`)
+
+async function tokenAt(request, pin, now) {
+  const r = await api(request, 'POST', '/api/signin', { pin }, { 'X-Test-IP': `reg-${pin}` }, { now })
+  expect(r.status).toBe(200)
+  return r.body.token
+}
+const pathOf = (svg) => (svg.match(/ d="([^"]+)"/) || [])[1]
+
+test.beforeEach(async ({ context, request }) => { await fresh(context, request, { now: PAGE_NOW }) })
+test.afterEach(async ({ context }) => { assertNoThirdParty(context) })
+
+test('the infant room register lists each child with signatures, moves, notes and the kept note, and prints without navigation', async ({ page, request }, testInfo) => {
+  const door = (await api(request, 'POST', '/api/door/unlock', { pin: SUPERVISOR_PIN }, { 'X-Test-IP': 'reg-door' }, { now: t('07:00') })).body.token
+  const marie = await tokenAt(request, EDUCATOR_PIN, t('07:00'))
+  await signInViaApi(request, door, 'c_ava', 'p_ava_mother', { now: t('08:05') })
+  const liam = await api(request, 'POST', '/api/staff/children/c_liam/in', { person_id: 'p_liam_father' }, bearer(marie), { now: t('08:10') })
+  expect(liam.status).toBe(201)
+  const nora = await signInViaApi(request, door, 'c_nora', 'p_nora_mother', { now: t('08:20') })
+  for (const [room, time] of [['r_toddler', '10:00'], ['r_infant', '10:40']]) {
+    expect((await api(request, 'POST', '/api/staff/children/c_ava/move', { room_id: room }, bearer(marie), { now: t(time) })).status).toBe(200)
+  }
+  await signOutViaApi(request, door, 'c_ava', 'p_ava_gran', { now: t('16:30') })
+  await signOutViaApi(request, door, 'c_nora', 'p_nora_mother', { now: t('16:45') })
+  const dana = await tokenAt(request, SUPERVISOR_PIN, t('16:50'))
+  const reason = 'Came in at 8:15; the tablet was slow.'
+  expect((await api(request, 'PUT', `/api/office/visits/${nora.visit.id}`, { in_date: '2026-09-14', in_time: '08:15', reason }, bearer(dana), { now: t('16:50') })).status).toBe(200)
+  const reg = (await api(request, 'GET', '/api/office/register?date=2026-09-14&room_id=r_infant', undefined, bearer(dana), { now: PAGE_NOW })).body
+
+  await page.goto('/office/')
+  await keypad(page, SUPERVISOR_PIN, page.locator('#pin-enter'))
+  await tap(page, page.getByRole('tab', { name: 'Today', exact: true }), 'Today tab')
+  await tap(page, page.locator('a.print-register[data-room="r_infant"]'), 'Print the daily register (Infant room)')
+  await page.waitForURL(/\/office\/register\/\?date=2026-09-14&room=r_infant$/)
+  await expect(page.locator('#register-table')).toBeVisible()
+  await expect(page.locator('h1')).toHaveText('Daily register: Infant room')
+  await expect(page.locator('.sample-badge')).toBeVisible()
+
+  expect(reg.rows.map((r) => r.child.name).sort()).toEqual(['Ava M. (SAMPLE)', 'Liam K. (SAMPLE)', 'Nora B. (SAMPLE)'])
+  for (const row of reg.rows) {
+    const rowEl = page.locator(`tr[data-register-row="${row.child.name}"]`)
+    await expect(rowEl.first()).toContainText(row.child.name)
+    const expected = row.visits.flatMap((v) => [v.in_signature_svg, v.out_signature_svg]).filter(Boolean)
+    const drawn = rowEl.locator('svg.signature path')
+    await expect(drawn, `${row.child.name}: one drawn signature per signed end`).toHaveCount(expected.length)
+    for (let i = 0; i < expected.length; i++) expect(await drawn.nth(i).getAttribute('d')).toBe(pathOf(expected[i]))
+    if (row.emergency) await expect(rowEl.first()).toContainText(row.emergency.name)
+  }
+  const ava = reg.rows.find((r) => r.child.name === 'Ava M. (SAMPLE)')
+  expect(ava.moves.map((m) => m.label)).toEqual(['Went to Toddler room 10:00 AM, back 10:40 AM'])
+  await expect(page.locator('tr[data-register-row="Ava M. (SAMPLE)"] .register-moves')).toHaveText('Went to Toddler room 10:00 AM, back 10:40 AM')
+  await expect(page.locator('tr[data-register-row="Liam K. (SAMPLE)"] .register-notes')).toHaveText('Recorded by MT, signature needed')
+  await expect(page.locator('tr[data-register-row="Nora B. (SAMPLE)"] .register-notes')).toHaveText(`Changed by Dana K. (SAMPLE): ${reason}`)
+  await expect(page.locator('#kept-note')).toHaveText(reg.kept_note)
+  await shot(page, testInfo, 'web', 'register')
+
+  await page.emulateMedia({ media: 'print' })
+  await expect(page.locator('header.topbar')).toBeHidden()
+  await expect(page.locator('#back')).toBeHidden()
+  await expect(page.locator('#print')).toBeHidden()
+  await expect(page.locator('#register-table')).toBeVisible()
+  await expect(page.locator('#kept-note')).toBeVisible()
+  await expect(page.locator('svg.signature').first()).toBeVisible()
+  await shot(page, testInfo, 'web', 'register-print')
+})
