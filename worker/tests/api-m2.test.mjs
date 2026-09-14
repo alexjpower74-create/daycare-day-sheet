@@ -306,9 +306,9 @@ test('attendance across midnight: Ava 10:30 PM Sep 14 to 1:15 AM Sep 15 is 90 mi
   assert.equal(a.status, 200, JSON.stringify(a.body))
   assert.deepEqual(a.body.dates, ['2026-09-14', '2026-09-15'])
   const ava = a.body.children.find((c) => c.id === 'c_ava')
-  assert.deepEqual(ava.days['2026-09-14'], { status: 'present', minutes: 90, open: false, absence: null,
+  assert.deepEqual(ava.days['2026-09-14'], { status: 'present', minutes: 90, open: false, still_here: false, absence: null,
     parts: [{ visit_id: inn.visit.id, in_label: '10:30 PM', out_label: '1:15 AM Sep 15', minutes: 90, continues: true, continued: false }] })
-  assert.deepEqual(ava.days['2026-09-15'], { status: 'present', minutes: 75, open: false, absence: null,
+  assert.deepEqual(ava.days['2026-09-15'], { status: 'present', minutes: 75, open: false, still_here: false, absence: null,
     parts: [{ visit_id: inn.visit.id, in_label: '10:30 PM Sep 14', out_label: '1:15 AM', minutes: 75, continues: false, continued: true }] })
   assert.deepEqual([ava.name, ava.room_name, ava.minutes, ava.days_present, ava.days_away, ava.not_signed_out],
     ['Ava M. (SAMPLE)', 'Infant room', 165, 2, 0, 0])
@@ -355,7 +355,7 @@ test('attendance: open visits are present with 0 minutes and Not signed out, in 
   const q = '?from=2026-09-11&to=2026-09-14'
   const a = await call('GET', `/api/office/attendance${q}`, { token: dana, now })
   const ava = a.body.children.find((c) => c.id === 'c_ava')
-  assert.deepEqual(ava.days['2026-09-11'], { status: 'present', minutes: 0, open: true, absence: null,
+  assert.deepEqual(ava.days['2026-09-11'], { status: 'present', minutes: 0, open: true, still_here: false, absence: null,
     parts: [{ visit_id: inn.visit.id, in_label: '9:00 AM', out_label: null, minutes: 0, continues: false, continued: false }] })
   assert.deepEqual(['2026-09-12', '2026-09-13', '2026-09-14'].map((d) => ava.days[d].status), ['not_booked', 'not_booked', 'missing'])
   assert.deepEqual([ava.minutes, ava.days_present, ava.not_signed_out, a.body.totals], [0, 1, 1, { minutes: 0, child_days: 1 }])
@@ -446,13 +446,37 @@ test('CSV: CRLF lines, quoting of Smith, "Junior", the formula guard on =SUM(A1)
   assert.doesNotMatch(text, /[^\r]\n/, 'every line ends CRLF')
   const lines = text.split('\r\n')
   assert.equal(lines[0], ATT_HEADER)
-  assert.ok(lines.includes("2026-09-14,'=SUM(A1) (SAMPLE),Preschool room,9:00 AM,Kim R. (SAMPLE),,,0,0.00,,Not signed out"), text)
+  assert.ok(lines.includes("2026-09-14,'=SUM(A1) (SAMPLE),Preschool room,9:00 AM,Kim R. (SAMPLE),,,0,0.00,,Still here"), text)
   assert.ok(lines.includes('2026-09-14,Ben C. (SAMPLE),Preschool room,9:10 AM,"Smith, ""Junior"" (SAMPLE)",3:00 PM,"Smith, ""Junior"" (SAMPLE)",350,5.83,,'), text)
   assert.ok(lines.includes(`2026-09-14,Liam K. (SAMPLE),Infant room,,,,,0,0.00,Other,"'-5 with the wind chill, stayed home"`), text)
   assert.ok(!/(^|,)[=+\-@]/m.test(text), 'no cell starts with a formula character')
   const s = await call('GET', '/api/office/attendance-summary.csv?from=2026-09-14&to=2026-09-14', { token, now })
   assert.ok(s.body.split('\r\n').some((l) => l.startsWith("'=SUM(A1) (SAMPLE),Preschool room,1,0,0.00,")), s.body)
   assert.equal((await call('GET', '/api/office/attendance.csv?from=2026-09-14&to=2026-09-14', { token: await staffToken(PIN.marie, now), now })).status, 403)
+})
+
+test('attendance: a visit open today is still here, with no Not signed out flag; the next day the same visit is not signed out', async () => {
+  const door = await doorToken()
+  const inn = await signIn(door, 'c_ava', 'p_ava_mother')
+  const q = '?from=2026-09-14&to=2026-09-15'
+  const read = async (now) => {
+    const token = await sup(now)
+    const json = (await call('GET', `/api/office/attendance${q}`, { token, now })).body
+    const csv = (await call('GET', `/api/office/attendance.csv${q}`, { token, now })).body.split('\r\n')
+    const summary = parseCsv((await call('GET', `/api/office/attendance-summary.csv${q}`, { token, now })).body)
+    return { ava: json.children.find((c) => c.id === 'c_ava'), csv, summary }
+  }
+  const part = { visit_id: inn.visit.id, in_label: '9:00 AM', out_label: null, minutes: 0, continues: false, continued: false }
+  const today = await read(nl('11:00'))
+  assert.deepEqual(today.ava.days['2026-09-14'], { status: 'present', minutes: 0, open: true, still_here: true, absence: null, parts: [part] })
+  assert.equal(today.ava.not_signed_out, 0, 'a child still here is not a forgotten sign-out')
+  assert.ok(today.csv.includes('2026-09-14,Ava M. (SAMPLE),Infant room,9:00 AM,Sarah M. (SAMPLE),,,0,0.00,,Still here'), today.csv.join('\n'))
+  assert.deepEqual([today.summary.find((r) => r[0] === 'Ava M. (SAMPLE)')[11], today.summary.at(-1)[11]], ['0', '0'])
+  const next = await read(nl('10:00', '2026-09-15'))
+  assert.deepEqual(next.ava.days['2026-09-14'], { status: 'present', minutes: 0, open: true, still_here: false, absence: null, parts: [part] })
+  assert.equal(next.ava.not_signed_out, 1)
+  assert.ok(next.csv.includes('2026-09-14,Ava M. (SAMPLE),Infant room,9:00 AM,Sarah M. (SAMPLE),,,0,0.00,,Not signed out'), next.csv.join('\n'))
+  assert.deepEqual([next.summary.find((r) => r[0] === 'Ava M. (SAMPLE)')[11], next.summary.at(-1)[11]], ['1', '1'])
 })
 
 // ---------- fixing a time, the register ----------

@@ -80,3 +80,15 @@ run: npx playwright test tests/door/door.spec.mjs --project chromium-tablet --gr
     .negative/door-null-text/results/door-door-grid-every-SAMPL-9bf2a-y-and-the-room-chips-filter-chromium-tablet/test-failed-1.png
   1 failed
 RESULT: RED as intended
+
+=== door negative:pill-wrap — 2026-09-14T13:09:10.268Z
+break: door.css places .status-pill in grid column 2 (beside the avatar, about 120 px) instead of across the card
+patched: app/public/door/door.css
+run: npx playwright test tests/door/door.spec.mjs --project chromium-tablet --grep "status pills: short labels stay on one line" (E2E_PORT 7806)
+  ✘  1 [chromium-tablet] › tests/door/door.spec.mjs:288:1 › status pills: short labels stay on one line at 1024×768; the long Still signed in label wraps inside its box (970ms)
+    Error: In since 12:45 PM stays on one line
+    Expected: 1
+    Received: 2
+    .negative/door-pill-wrap/results/door-door-status-pills-sho-890e9--label-wraps-inside-its-box-chromium-tablet/test-failed-1.png
+  1 failed
+RESULT: RED as intended
