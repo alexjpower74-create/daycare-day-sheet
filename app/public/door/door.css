@@ -64,8 +64,9 @@ body.door { min-height: 100vh; background: var(--ground); }
 [data-status="gone_home"] { --s: var(--status-gone); }
 [data-status="away"] { --s: var(--status-away); }
 [data-status="not_booked"] { --s: var(--status-not-booked); }
+/* A 14 px radius reads as a pill on one line and stays a rounded box when a long label wraps. */
 .status-pill {
-  display: inline-flex; padding: 3px 12px; border-radius: 999px; font-size: 15px; font-weight: 600;
+  display: inline-flex; max-width: 100%; padding: 3px 12px; border-radius: 14px; font-size: 15px; font-weight: 600;
   color: var(--text); background: color-mix(in srgb, var(--s) var(--tint), transparent); border: 1px solid var(--s);
 }
 .chip-sign {

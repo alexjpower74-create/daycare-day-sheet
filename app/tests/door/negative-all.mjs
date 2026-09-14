@@ -5,7 +5,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
-const NAMES = ['pickup-list', 'over-banner', 'overlay', 'tap-after-stroke']
+const NAMES = ['pickup-list', 'over-banner', 'overlay', 'tap-after-stroke', 'stale-label', 'null-text']
 const results = NAMES.map((n) => [n, spawnSync(process.execPath, [path.join(HERE, `negative-${n}.mjs`)], { stdio: 'inherit' }).status])
 console.log('\n== door negative controls')
 for (const [n, code] of results) console.log(`${code === 0 ? 'RED (good)  ' : 'NOT RED (bad)'} door negative:${n} exit ${code}`)

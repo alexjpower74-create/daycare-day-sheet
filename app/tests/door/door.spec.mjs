@@ -78,6 +78,7 @@ test('grid: every SAMPLE child with the status the API gives, Isla under Not boo
   await shot(page, testInfo, 'door', '2-grid')
   await tap(page, page.locator('button.chip[data-room="r_toddler"]'), 'Toddler room chip')
   await expect(page.locator('button.child')).toHaveCount(6)
+  await expect(page.locator('#app'), 'no stray text in the filtered grid').not.toContainText(/null|undefined/)
   await expect(page.locator('button.chip[data-room="r_toddler"]')).toHaveAttribute('aria-pressed', 'true')
   await tap(page, page.locator('button.chip[data-room="all"]'), 'All chip')
   await expect(page.locator('button.child')).toHaveCount(19)
@@ -262,6 +263,26 @@ test('timers: a sheet left alone goes back to the grid after 45 s, a confirmatio
   await page.clock.runFor(2_000)
   await expect(page.locator('#sheet'), 'back to the grid after 6 s').toHaveCount(0)
   await expect(card(page, 'c_ava')).toContainText('In since 9:00 AM')
+})
+
+test('a visit left open from last week: the card says Still signed in from Tue Sep 8, 8:05 AM. Not signed out.', async ({ page, context, request }, testInfo) => {
+  await fresh(context, request)
+  const door = await doorToken(request)
+  await signInViaApi(request, door, 'c_ruby', 'p_ruby_mother', { now: at('2026-09-08T08:05:00-02:30') })
+  await signInViaApi(request, door, 'c_ben', 'p_ben_mother')
+  await setUpTablet(page)
+  const ruby = card(page, 'c_ruby')
+  await expect(ruby).toHaveAttribute('data-status', 'in')
+  await expect(ruby, 'the card tells the truth about an old open visit').toContainText('Still signed in from Tue Sep 8, 8:05 AM. Not signed out.')
+  await expect(ruby).not.toContainText('In since')
+  await expect(card(page, 'c_ben'), 'a child signed in today still reads In since').toContainText('In since 9:00 AM')
+  // Ruby's card is below the fold with all 19 children; the Preschool room chip brings it into view for the screenshot.
+  await tap(page, page.locator('button.chip[data-room="r_preschool"]'), 'Preschool room chip')
+  await expect(ruby).toBeInViewport()
+  await shot(page, testInfo, 'door', '7-still-signed-in-from-last-week')
+  await tap(page, ruby, 'Ruby card')
+  await expect(page.locator('#sheet .status-line')).toHaveText('Still signed in from Tue Sep 8, 8:05 AM. Not signed out.')
+  await expect(page.locator('#action-out'), 'the child can still be signed out').toBeVisible()
 })
 
 test('a device token that stops working brings back Set up this tablet', async ({ page, context, request }) => {

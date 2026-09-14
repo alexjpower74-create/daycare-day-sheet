@@ -2,6 +2,52 @@
 
 A record, not a queue. Newest milestone at the top.
 
+## M4 — follow-ups (a) and the "Still signed in" door label (b) — DONE
+
+### (a) `GET /api/office/follow-ups` — commit 6501c93
+
+- **What it lists.** `pending_signatures` are staff-recorded in or out times still waiting for the parent's signature, on visits dated in the last 14 dates (today included), newest first, whether or not the child is here now. `not_signed_out` is every open visit dated before today, oldest first. Supervisor only (every `/api/office/*` path already is).
+- **API test** (`follow-ups: …`):
+  - Ava's recorded drop-off at 8:05 AM today, after she went home at 4:30 PM, is listed with `recorded_by` MT.
+  - Nora's from Tue Sep 1 (the 14th date) is listed; Liam's from Mon Aug 31 (the 15th) is not.
+  - Ruby's open visit from Tue Sep 8 and Finn's from Thu Sep 10 are listed in that order; Ben, signed in today, is not.
+  - Ava signing at the door removes her item; an educator gets 403.
+- **`negative:followups`:** the copy keeps only visits still open, so only children signed in now. Red on that test: Ava and Nora dropped out of the list.
+
+### (b) The door label for a visit left open from an earlier day — commit below
+
+- **Worker (`db.js`).** An open visit whose date is before today reads `Still signed in from Tue Sep 8, 8:05 AM. Not signed out.` (the visit's own date and time); one opened today still reads `In since 8:05 AM`. Status stays `in`, so the door still offers Sign out.
+- **Door page.** No change needed: the card and the sheet show the API's `status_label` as it is.
+- **API test** (`door: a visit left open from an earlier day …`):
+  - Ruby's visit reads `In since 8:05 AM` on Sep 8 itself, and the new label on Mon Sep 14, in both the list and the detail.
+  - Ben, signed in today, reads `In since 9:00 AM`.
+  - Signing Ruby out makes her `Gone home at 9:30 AM`.
+- **Door spec** (`a visit left open from last week: …`, both engines), set up like the demo seed: Ruby signed in Tue Sep 8 and never out.
+  - Her card has `data-status="in"` and the exact label, and does not contain "In since".
+  - Ben's card still reads `In since 9:00 AM`.
+  - The sheet's status line shows the same label, and `#action-out` is there.
+  - Screenshot: `7-still-signed-in-from-last-week`.
+- **Control (o) `negative-stale-label`, red once in a copy.** It needs a Worker patch, so `negative-lib.mjs` can now patch `worker/…` files as well as `app/public/…`. The copy's `db.js` labels every open visit "In since …". The door check went red: `Expected substring: "Still signed in from Tue Sep 8, 8:05 AM. Not signed out."` against `Received string: "RERuby E. (SAMPLE)Preschool roomIn since 8:05 AM"`. It is part of `npm run negative:door`, which now runs 5 controls.
+
+### Two page bugs the new screenshot showed (fixed in the (b) commit)
+
+The first `7-still-signed-in-from-last-week` shot missed Ruby's card, which was below the fold. The spec now taps the Preschool room chip before the shot. The shot then showed two bugs that no test had caught:
+
+1. **A stray "null" under the grid.** Whenever a room filter leaves no not-booked children, `drawGrid` handed `replaceChildren` a `null`, which prints as text. It showed on the Toddler room and Preschool room chips; the grid test filtered to the toddler room and never looked for it.
+   - Fix: empty sections are left out.
+   - Test: the grid spec asserts `#app` has no `null` or `undefined` after filtering.
+   - **Control (p) `negative-null-text`:** the copy passes the `null` again; red with `Received string: "…Maya S. (SAMPLE)Toddler roomNot in yetnull"`.
+2. **A long status label drew as a circle.** The 999 px radius turned the wrapped "Still signed in from Tue Sep 8, 8:05 AM. Not signed out." into an ellipse, with the text spilling outside it. `.status-pill` now has a 14 px radius (still a pill on one line, a rounded box when it wraps) and `max-width: 100%`. This one has no test; the screenshot is the check.
+
+`npm run negative:door` now runs 6 controls.
+
+### Verified at the (b) commit
+
+- `cd worker && npm test`: exit 0 (unit 31, API 42, setup 1).
+- `cd app && E2E_PORT=7804 npx playwright test tests/door`: 26/26 (13 on chromium-tablet, 13 on webkit-tablet), after both screenshot fixes.
+- `negative:followups` red at (a); door controls (o) and (p) red at (b).
+- Every server started for these runs was stopped, and ports 7802, 7804, 7805 and 7806 are free.
+
 ## M3 — Worker changes (a) and the door tablet (b) — DONE
 
 ### (a) Worker changes from the lead's M2 answers — commit 8bf2c61, on its own so dd2 can merge it

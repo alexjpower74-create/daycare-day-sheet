@@ -50,3 +50,33 @@ run: npx playwright test tests/door/door.spec.mjs --project chromium-tablet --gr
     .negative/door-tap-after-stroke/results/door-door-sign-in-by-real--4e543-he-visit-with-its-signature-chromium-tablet/test-failed-1.png
   1 failed
 RESULT: RED as intended
+
+=== door negative:stale-label — 2026-09-14T12:58:53.863Z
+break: worker db.js status labels every open visit "In since …", whatever date it was opened
+patched: worker/src/db.js
+run: npx playwright test tests/door/door.spec.mjs --project chromium-tablet --grep "a visit left open from last week" (E2E_PORT 7806)
+  ✘  1 [chromium-tablet] › tests/door/door.spec.mjs:267:1 › a visit left open from last week: the card says Still signed in from Tue Sep 8, 8:05 AM. Not signed out. (8.9s)
+    Error: the card tells the truth about an old open visit
+    expect(locator).toContainText(expected) failed
+    Locator: locator('button.child[data-child="c_ruby"]')
+    Expected substring: "Still signed in from Tue Sep 8, 8:05 AM. Not signed out."
+    Received string:    "RERuby E. (SAMPLE)Preschool roomIn since 8:05 AM"
+           - unexpected value "RERuby E. (SAMPLE)Preschool roomIn since 8:05 AM"
+    .negative/door-stale-label/results/door-door-a-visit-left-ope-cad54-p-8-8-05-AM-Not-signed-out--chromium-tablet/test-failed-1.png
+  1 failed
+RESULT: RED as intended
+
+=== door negative:null-text — 2026-09-14T13:01:51.242Z
+break: door.js drawGrid hands replaceChildren the null for a missing Not booked today section
+patched: app/public/door/door.js
+run: npx playwright test tests/door/door.spec.mjs --project chromium-tablet --grep "grid: every SAMPLE child" (E2E_PORT 7806)
+  ✘  1 [chromium-tablet] › tests/door/door.spec.mjs:61:1 › grid: every SAMPLE child with the status the API gives, Isla under Not booked today, and the room chips filter (9.5s)
+    Error: no stray text in the filtered grid
+    expect(locator).not.toContainText(expected) failed
+    Locator: locator('#app')
+    Expected pattern: not /null|undefined/
+    Received string: "CHChloe H. (SAMPLE)Toddler roomNot in yetELEmma L. (SAMPLE)Toddler roomNot in yetFDFinn D. (SAMPLE)Toddler roomNot in yetJWJack W. (SAMPLE)Toddler roomNot in yetLFLeo F. (SAMPLE)Toddler roomNot in yetMSMaya S. (SAMPLE)Toddler roomNot in yetnull"
+           - unexpected value "CHChloe H. (SAMPLE)Toddler roomNot in yetELEmma L. (SAMPLE)Toddler roomNot in yetFDFinn D. (SAMPLE)Toddler roomNot in yetJWJack W. (SAMPLE)Toddler roomNot in yetLFLeo F. (SAMPLE)Toddler roomNot in yetMSMaya S. (SAMPLE)Toddler roomNot in yetnull"
+    .negative/door-null-text/results/door-door-grid-every-SAMPL-9bf2a-y-and-the-room-chips-filter-chromium-tablet/test-failed-1.png
+  1 failed
+RESULT: RED as intended

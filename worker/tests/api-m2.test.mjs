@@ -582,6 +582,24 @@ test('follow-ups: a signature owed for a child who went home is listed, one 15 d
   assert.equal((await call('GET', '/api/office/follow-ups', { token: await staffToken(PIN.marie, now), now })).status, 403)
 })
 
+test('door: a visit left open from an earlier day reads "Still signed in from Tue Sep 8, 8:05 AM. Not signed out."; one opened today reads In since', async () => {
+  const door = await doorToken(nl('07:00', '2026-09-08'))
+  await signIn(door, 'c_ruby', 'p_ruby_mother', nl('08:05', '2026-09-08'))
+  const sameDay = await call('GET', '/api/door/children', { token: door, now: nl('17:00', '2026-09-08') })
+  assert.equal(sameDay.body.children.find((c) => c.id === 'c_ruby').status_label, 'In since 8:05 AM', 'on the day it was opened')
+  await signIn(door, 'c_ben', 'p_ben_mother', nl('09:00'))
+  const list = await call('GET', '/api/door/children', { token: door })
+  const label = (id) => { const c = list.body.children.find((x) => x.id === id); return [c.status, c.status_label] }
+  assert.deepEqual(label('c_ruby'), ['in', 'Still signed in from Tue Sep 8, 8:05 AM. Not signed out.'])
+  assert.deepEqual(label('c_ben'), ['in', 'In since 9:00 AM'])
+  const detail = await call('GET', '/api/door/children/c_ruby', { token: door })
+  assert.deepEqual([detail.body.child.status, detail.body.child.status_label], ['in', 'Still signed in from Tue Sep 8, 8:05 AM. Not signed out.'])
+  assert.equal(detail.body.visit.date, '2026-09-08')
+  await signOut(door, 'c_ruby', 'p_ruby_father', nl('09:30'))
+  const after = await call('GET', '/api/door/children', { token: door, now: nl('09:31') })
+  assert.deepEqual(after.body.children.filter((c) => c.id === 'c_ruby').map((c) => [c.status, c.status_label]), [['gone_home', 'Gone home at 9:30 AM']])
+})
+
 // ---------- the demo seed ----------
 
 test('demo seed: 15 weekdays of attendance with absences, one open visit and a signature waiting; today infant at the limit, toddler over, preschool ok; a live note link', async () => {
