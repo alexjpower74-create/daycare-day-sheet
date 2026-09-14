@@ -44,3 +44,20 @@ Newest at the bottom.
 16. **`.rig/` is not committed.** `rig init` marks it machine state.
 17. **The Policy and Standards Manual PDF (17 MB) is committed** as the raw source for four quotes, so `npm run rules` works from a
     clean clone without the network.
+18. **Signatures carry their own ink.** `signature_svg` puts `fill="none" stroke="currentColor"` and round caps on the path, so a
+    signature draws on screen and prints black on paper with no page CSS (dd1's M1 question).
+19. **Time labels are bare times** ("8:05 AM"); pages add "In since" and the like. One format, so no page guesses (dd2's M1 question).
+20. **A note's "What we did today" lists only rooms with text; `rooms_today` lists every room the child was in**, so staff can write
+    a line for a room the child has already left (dd1's cross-review of dd2).
+21. **Attendance has an `upcoming` status** for booked dates after today. "Missing" is only ever a past or present day, so a
+    supervisor never sees tomorrow flagged as an unexplained absence.
+22. **The demo seed never moves a child out of their own room** to make a point: today shows the infant room at the limit, the
+    toddler room over (6 toddlers, 1 staff) and the preschool room OK.
+23. **`/api/info` before first setup answers empty strings** for the centre name and phone; pages show no name rather than a guess.
+24. **Fixing a forgotten sign-out leaves "picked up by" empty.** The register shows the change, who made it and why; the app does not
+    invent who took the child home.
+25. **A real centre starts from `worker/tools/first-setup.mjs`**, which writes a git-ignored, owner-only SQL file with the centre row,
+    the cited ratio rules and one supervisor's PIN hash. There is no route that creates a supervisor, so a deployed Worker cannot be
+    taken over through the API.
+26. **QA runs from worktrees pinned with `--ref`** (`rig qa <sha>` without `--ref` grades main) and gates on each command's own
+    exit code; a second pinned worktree on the lead's port lets two slices be graded at once.
