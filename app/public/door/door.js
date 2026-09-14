@@ -28,16 +28,19 @@ let sheet = null
 async function refresh() {
   clearTimeout(pollTimer)
   if (!doorSession.token()) return showSetup()
-  try {
-    const [i, d] = await Promise.all([doorApi.info(), doorApi.children()])
-    info = i
-    data = d
-    offline.hidden = true
+  // Info (name, date, clock) and the children are fetched independently: a failed /api/info must not throw away a good grid.
+  const [i, d] = await Promise.allSettled([doorApi.info(), doorApi.children()])
+  if (i.status === 'fulfilled') {
+    info = i.value
     drawHeader()
+  }
+  if (d.status === 'fulfilled') {
+    data = d.value
+    offline.hidden = true
     whenIdle(drawGrid)
-  } catch (e) {
-    if (e.status === 401) return showSetup()
-    offline.textContent = `${e.message} Trying again shortly.`
+  } else {
+    if (d.reason.status === 401) return showSetup()
+    offline.textContent = `${d.reason.message} Trying again shortly.`
     offline.hidden = false
   }
   pollTimer = setTimeout(refresh, POLL_MS)

@@ -353,6 +353,20 @@ test('with /api/info failing, the page shows no guessed centre name and no SAMPL
   expect(await page.title(), 'no guessed centre name in the title').not.toContain('Little Harbour')
 })
 
+test('with /api/info failing, the children grid still renders and refreshes', async ({ page, context, request }) => {
+  await fresh(context, request)
+  await page.clock.install()
+  await page.route('**/api/info', (route) => route.fulfill({ status: 500, contentType: 'application/json',
+    body: JSON.stringify({ error: 'Something went wrong on our side. Try again.', code: 'server_error' }) }))
+  await page.goto('/door/')
+  await keypad(page, SUPERVISOR_PIN, page.locator('#pin-enter'))
+  await expect(card(page, 'c_ava'), 'the grid renders without /api/info').toHaveAttribute('data-status', 'not_in_yet')
+  await signInViaApi(request, await doorToken(request), 'c_ava', 'p_ava_mother')
+  await page.clock.runFor(15_000)
+  await expect(card(page, 'c_ava'), 'the grid refreshed without /api/info').toHaveAttribute('data-status', 'in')
+  await expect(page.locator('#offline')).toBeHidden()
+})
+
 test('a device token that stops working brings back Set up this tablet', async ({ page, context, request }) => {
   await fresh(context, request)
   await setUpTablet(page)
