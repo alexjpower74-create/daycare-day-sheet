@@ -2,6 +2,123 @@
 
 A record, not a queue. Newest milestone at the top.
 
+## Cross-review of dd2 M1 — DONE (read only, branch `rig/dd2` at 9370b07)
+
+Read: `api.js`, `room/room.js`, `room/session.js`, `room/note/staff-note.js`, `note/note.js`, `note/render.js`, `keypad.js`. Each call was checked against docs/API.md and against what my Worker actually answers.
+
+**Nothing will break against the real Worker.** These all match:
+- Every path and method.
+- Every request body: `{ pin }`, `{ room_id }`, `{ person_id }`, log bodies, `{ text }`, `{ text, date }`, and the link POST with no body.
+- Every field the pages read, including `me.room_id`, `me.staff.name`, `not_in_yet[].home_room_id`, `away[].child` / `reason_label` and `gone_home`.
+- On rooms and children: `rooms[].room` / `meter` / `children` / `staff`, the children's `napping`, `last_meal_label`, `awaiting_signature` and `in_label`, and `since_label`.
+- On the staff child view: `visit.out_at`, `child.room_id` / `room_name`, `logs[].at` / `label` / `time_label` / `by.initials` and `people`.
+- The whole note shape, and the link's `url` / `expires_label`.
+- Error handling: a 401 forgets the token; the parent page drops the note on 404 and 410 and shows the API's text; an error with a `field` lands under `[name=field]`, and the textareas are named `text` as the API's `field: "text"` expects.
+
+Findings, none blocking. dd2 or the lead decide:
+1. **Stale nap button (low).** `room.js` `refreshSheet` works out nap state from the fresh `d.logs`, then overrides it with `today`, which can be up to 5 s old. If another phone logged a nap start in that window, the sheet offers "Nap start". Tapping it gets 409 `already_napping`, which is shown as a toast. Suggest trusting `d.logs`, or the API's `napping` after `refresh()`.
+2. **Undo shown on other people's logs (low, UX).** Every row in Today shows "Undo", but an educator can only void their own log: the Worker answers 403 "Only the person who logged it, or the supervisor, can undo it." The page handles it with a toast. It could hide Undo unless `log.by.id` is the signed-in staff member or the role is supervisor.
+3. **"What we did today" can miss a room (medium, contract question for the lead).** `staff-note.js` builds its room list from `note.activities` plus the child's current room. API.md now lists only rooms whose line is not empty, so a child moved out of a room whose line is still empty never gets that room's box on this page. No field in the API says which rooms a child was in today. Options: show every active room from `today.rooms`, or add `placed_room_ids` to the note or staff child view.
+4. **Mock data in a real page (low, lead decides).** `room/api.mock.js` ships in `app/public`, and `?mock=1` is remembered for the tab. Anyone opening `/room/?mock=1` on a real phone sees made-up data that looks live. Suggest refusing mock mode off `127.0.0.1`/`localhost`, or not shipping it.
+5. **For dd2's M3.** `api.js` `call()` parses every answer as JSON. The CSV downloads are `text/csv`, so they need a real link (`<a href download>` with the token passed another way) or `fetch` + blob, not `call()`.
+6. **For information only.** The keypad refuses fewer than 4 digits with its own message before calling the API, so `#pin-error` shows "Enter your 4 to 6 digit PIN." rather than the API's text. The room spec's wrong-PIN test uses 4 digits, so it is unaffected.
+
+## M2 — Worker, the rest — DONE
+
+### What was built
+
+| file | what |
+|---|---|
+| `src/office.js` | Every office route: children (list, POST, PUT partial; one field at a time in API.md order), people (POST, PUT, DELETE → inactive; setting the emergency contact clears it on the child's others), rooms (list, POST, PUT; closing a room with children signed in → 409), ratios (list with the note, PUT, reset, `edited`), staff (list, POST, PUT; `pin_taken`; always one active supervisor), absences (POST, DELETE), `PUT /api/office/visits/:id` (fix a time). |
+| `src/attendance.js` | Pure. `splitVisit` cuts at every local midnight; an open visit is one 0-minute part. `buildAttendance` gives the JSON, the attendance.csv rows and the summary rows. `movesLabels` builds the register's moves line. |
+| `src/csv.js` | Pure. CRLF lines, quoting, the formula guard, hours to 2 decimals. |
+| `src/reports.js` | `GET /api/office/attendance`, `attendance.csv`, `attendance-summary.csv`, `register`. |
+| `src/seed.js` | `resetSample` (moved out of index.js) and `POST /api/test/seed { scenario: "demo" }`. |
+| `tools/first-setup.mjs` | The lead's first-setup tool: `--centre --phone --supervisor --pin [--out]`. No network. The SQL has the centre with `sample = 0`, the six cited rules and one supervisor hashed exactly as `auth.js` does. File mode 600, quotes doubled, and a bad argument exits 2 without writing. `npm run first-setup -- …` also works. |
+| `tests/run.mjs` | New third stage, "setup". After the API suites it frees the port, applies migrations plus the tool's SQL to a fresh D1, and starts the Worker **without** `TEST_MODE` on the same port. Then it runs `tests/api-setup.test.mjs`, stops the Worker and removes the state. The stage is skipped with `--grep`, and skipped with a loud message if the port belonged to a Worker the run did not start. Any failure anywhere, including a Worker that will not start, exits 1. |
+| `tests/negative-lib.mjs` | `NEG_PORT` overrides the port (default 7805). |
+
+### Verified, and how it could have failed
+
+`cd worker && npm test` exits 0 with three stages:
+- **unit** 31/31;
+- **api** 40/40 (the 17 M1 tests plus 23 M2 tests);
+- **setup** 1/1.
+
+The unit tests added in M2:
+- **`tests/attendance.test.mjs`**:
+  - 90 + 75 across midnight.
+  - Both DST nights: 300 minutes on fall-back, 180 on spring-forward.
+  - A 3-part visit.
+  - Open visit; missing, not booked, away and not yet registered.
+  - **Property:** 300 seeded visits, 1 minute to 30 hours, over both DST weeks, a third starting at 11 PM. Per child, Σ day parts = Σ (out − in) minutes; no part is negative; every part starts on its own date and ends by that date's local midnight. The test also requires more than 100 of them to cross midnight, so it cannot pass on easy data.
+  - Moves labels, CSV cells.
+- **`tests/first-setup.test.mjs`**: the SQL shape; the hash verifies with `hashPin` and a wrong PIN does not; no "SAMPLE" and never the PIN; a new salt each run; bad input refused; the CLI exits 2 and writes nothing.
+
+`tests/api-m2.test.mjs` has every test in the M2 list:
+- One test per child field.
+- People, rooms, staff and absences.
+- **Ratios:** infant at 1:4 → 4 infants with 1 staff `at_limit`, then max 3 → row 4, then reset → over, needs 1.
+- **Across midnight:** the JSON parts and the two exact CSV rows.
+- **A normal day:** 450 minutes, the number the journey test expects.
+- **DST fall-back:** 60 + 240 = 300.
+- **Open visit:** JSON, CSV row and summary.
+- **Missing vs not booked vs away**, including a child who starts later, the 92-day limit and `to` before `from`.
+- **Summary CSV:** exact header, 19 rows plus Total, and every numeric column sums to the Total row.
+- **CSV:** CRLF, `"Smith, ""Junior"" (SAMPLE)"`, `'=SUM(A1) (SAMPLE)`, a `'-5 …` note guarded and quoted, both filenames.
+- **Fix a time:** every refusal, both edits with who, why and the old time, the door and meter after closing, the CSV using 8:45 AM to 4:30 PM, and an overlap refused.
+- **Register:** infant and toddler rooms, dob, emergency contact with phone, both signature SVGs, moves both ways, recorded-by, edited.
+- **Demo seed:** 15 weekdays with at least 15 children present each and none on weekends, 4 different absence reasons, 1 visit never signed out, a signature waiting, today's meters `at_limit` 3/1, `ok` 4/1, `over` 9 needing 1, and a live note link.
+
+`tests/api-setup.test.mjs`, against the Worker **without** `TEST_MODE`, checks:
+- The tool's PIN signs in as supervisor.
+- `/api/info` shows the made-up check centre with `sample: false`, and ignores `X-Test-Now`.
+- The SAMPLE PIN 4826 is 401.
+- The six rules are the cited, unedited numbers; there are no children and no rooms.
+- `/api/test/reset` and `/api/test/seed` are 404.
+
+**Negative controls: all 10 red** (`npm run negative`, exit 0). Output is in `worker/tests/negative-control.log`.
+
+| control | break in the copy | red test and what it saw |
+|---|---|---|
+| (f) `negative:utcday` | `splitVisit` cuts at the next UTC midnight | across midnight: one part with `minutes: 165` where `90` was expected |
+| (g) `negative:csvguard` | `cell()` drops the `'` prefix | CSV: the file held `2026-09-14,=SUM(A1) (SAMPLE),…` and `"-5 with the wind chill…"` |
+| (h) `negative:ratioedit` | `loadMeters` reads `default_children_per_caregiver` / `default_max_children` | ratios: `['over',3,3,1,'…Needs 1 more staff.']` where `['at_limit',4,4,0,'4 children, 1 staff. At the limit.']` was expected |
+| (i) `negative:ratelimit` | `checkPin` no longer calls `recordWrongPin` | PIN guard: `401 !== 429` on the sixth wrong PIN |
+| (j) `negative:openvisit` | `splitVisit` ends an open visit at the real clock | open visits: `minutes: 900, open: false` where `0, true` was expected |
+
+The five M1 controls went red again in the same run.
+
+**`NEG_PORT` and exit codes:**
+- `NEG_PORT=7806 node tests/negative-csvguard.mjs` ran on 7806 and went red (exit 0).
+- With 7806 held by another process, the same control exited **1**. The log shows `REFUSED — something already answers` and `STAYED GREEN`, so a control that cannot run never passes quietly. That one log entry is this deliberate check.
+- `npm test` exits 1 on failure: each control's inner run in the log reports `exit 1`.
+
+### Choices made where API.md left room (lead: overrule any)
+
+1. **Present, missing, children in range.** `present` = the child has any part that date, even a 0-minute one. `missing` is literal: a booked date with no visit and no absence, **future dates included**. The office page may want to grey dates after `today`. Attendance lists every child registered on any date in the range, plus anyone with a part or absence in it, sorted by home room, then name.
+2. **CSV Room and notes.** `Room` is the home room. A part that is both continued and continues (a visit over 2 midnights) gets `Continued from the day before; Continues past midnight`.
+3. **Absences and sign-ins.** An absence is refused if a visit touches that date (an open visit counts only on its own date). Signing a child in after an absence was recorded is allowed: the day is `present` and the CSV still has the absence row. An unknown `child_id` on POST absences is 400 `field: "child_id"`, not 404, because it is a body field.
+4. **Fix a time.**
+   - A missing date or time falls back to the stored value; for an open visit's out, the date falls back to the in date.
+   - A time in the spring-forward gap is 400.
+   - The new times must not overlap another visit of the child, nor cross a room move.
+   - Closing an open visit leaves `out_by` null, because nobody picked up on the record.
+   - `edits[].what` reads `"Out not signed out changed to 4:30 PM Mon Sep 14"` / `"In 9:00 AM Mon Sep 14 changed to 8:45 AM Mon Sep 14"`, and `at_label` is `"Mon Sep 14, 5:00 PM"`.
+5. **Register.** Rows are the children with a placement in that room that day, whatever their home room. Moves read from that room's side: `"Went to Toddler room 10:00 AM, back 10:40 AM"` for a child who left and came back, `"Came from Infant room 10:00 AM, left 10:40 AM"` for a visitor.
+6. **Rooms and staff.** Closing a room also ends staff presence in it, and making a staff member inactive ends theirs. PIN uniqueness is checked against every staff member, inactive ones included. The last-supervisor guard covers both a role change and going inactive. A staff member's role is read from the staff row on every request, so a role change applies at once.
+7. **Initials** use the first letter or digit of each of the first two words. `=SUM(A1) (SAMPLE)` gets `SS`; every SAMPLE name is unchanged.
+8. **Demo seed.** The SAMPLE centre has only 8 pre-schoolers, so Maya S. (2 years 9 months, in the pre-school range) is signed into the toddler room and moved to the preschool room at 8:30. That makes the preschool room 9, over, and leaves the toddler room at 4, ok.
+   - The visit never signed out is Finn's, 5 weekdays ago. Its placement ends, so it does not skew today's meters, but the door honestly shows Finn as in until a supervisor fixes it.
+   - The waiting signature is Leo's, on the last weekday, recorded by Kevin.
+   - Absences: Liam sick, Emma holiday, Sam appointment, Zoe family.
+   - Today's times are held to no later than now, and times are drawn from a generator seeded by the date.
+
+### Left undone
+
+- **M3:** the door tablet, waiting for your prompt.
+- **No screenshot:** M2 has nothing visible (the office page is dd2's).
+
 ## M1 — Worker core — DONE
 
 ### What was built
@@ -77,10 +194,10 @@ Every server was stopped afterwards and the state directories removed.
 
 ### Choices made where API.md or the brief left room (lead: overrule any)
 
-1. **Brief vs API.md, the ratio moment.** The brief says "Kevin also into the infant room → `at_limit` again". With 4 infants and 2 staff, API.md gives `allowed = min(2×3, 6) = 6`, so row 7 applies: **ok, "4 children, 2 staff. Room for 2 more."** The test asserts the API.md answer. If the lead meant "no longer over", nothing needs changing. If a 6th infant was intended, the test needs two more sign-ins.
-2. **Row 4 label.** The table says `Over the most this room can hold (max).` without braces. I render the number: `"7 children, 2 staff. Over the most this room can hold (6)."` Please confirm or correct the literal.
-3. **Two office routes early.** `PUT /api/office/ratios/:age_group` (1–50 / 1–60 or null, `field` names the input, `edited`) backs the unset test. `DELETE /api/office/people/:pid` (sets `active: false`) backs the inactive-person test. Both follow API.md, so they need no test-only path. Also, **every `/api/office/*` path requires a supervisor before routing**, so an educator gets 403 even on M2 routes that don't exist yet.
-4. **`signature_svg` carries no style**, exactly as API.md shows: `<path d="…"/>`. A bare path fills black, so pages that draw it need `svg path { fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round }`. This matters for dd2 (office register) and dd1 M3.
+1. **DONE (lead: the test is right, PLAN.md fixed).** **Brief vs API.md, the ratio moment.** The brief says "Kevin also into the infant room → `at_limit` again". With 4 infants and 2 staff, API.md gives `allowed = min(2×3, 6) = 6`, so row 7 applies: **ok, "4 children, 2 staff. Room for 2 more."** The test asserts the API.md answer. If the lead meant "no longer over", nothing needs changing. If a 6th infant was intended, the test needs two more sign-ins.
+2. **DONE (API.md now says `({max_children})`).** **Row 4 label.** The table says `Over the most this room can hold (max).` without braces. I render the number: `"7 children, 2 staff. Over the most this room can hold (6)."` Please confirm or correct the literal.
+3. **DONE (lead: fine).** **Two office routes early.** `PUT /api/office/ratios/:age_group` (1–50 / 1–60 or null, `field` names the input, `edited`) backs the unset test. `DELETE /api/office/people/:pid` (sets `active: false`) backs the inactive-person test. Both follow API.md, so they need no test-only path. Also, **every `/api/office/*` path requires a supervisor before routing**, so an educator gets 403 even on M2 routes that don't exist yet.
+4. **DONE in M2 (the contract now puts `fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"` on the path; signature.js and its tests changed, `d` still only M, L, digits and spaces).** Originally: **`signature_svg` carries no style**, exactly as API.md shows: `<path d="…"/>`. A bare path fills black, so pages that draw it need `svg path { fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round }`. This matters for dd2 (office register) and dd1 M3.
 5. **Order of refusals on sign-in:** 404 child → 409 `bad_state` (no longer registered) → 409 `already_in` → 403 `not_on_list` → 400 signature. Sign-out: 404 → 409 `not_in` → 403 → 400.
 6. **Wording.**
    - A refused pick-up names the person when the id exists (the neighbour, or another child's parent), and says "That person" only for an unknown id.
@@ -106,4 +223,4 @@ Every server was stopped afterwards and the state directories removed.
 ### Needs from another slice
 
 - **dd2, and the lead's review:** item 4 (SVG styling). Items 1 and 2 are for the lead to confirm.
-- **Lead (rig config):** `rig guard --staged` accepted this report ("31 file(s), all inside slice"), but after the commit `rig status` lists `docs/build-report-dd1.md` as OUTSIDE SLICE. The brief says to commit it here, so please add it to dd1's paths in `.rig/config.json`, or say where the report should live.
+- **DONE (lead added the report path to Owns).** **Lead (rig config):** `rig guard --staged` accepted this report ("31 file(s), all inside slice"), but after the commit `rig status` lists `docs/build-report-dd1.md` as OUTSIDE SLICE. The brief says to commit it here, so please add it to dd1's paths in `.rig/config.json`, or say where the report should live.

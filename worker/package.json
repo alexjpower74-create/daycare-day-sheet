@@ -13,6 +13,12 @@
     "negative:limit": "node tests/negative-limit.mjs",
     "negative:pickup": "node tests/negative-pickup.mjs",
     "negative:expiry": "node tests/negative-expiry.mjs",
-    "negative:expiry-never": "node tests/negative-expiry-never.mjs"
+    "negative:expiry-never": "node tests/negative-expiry-never.mjs",
+    "negative:utcday": "node tests/negative-utcday.mjs",
+    "negative:csvguard": "node tests/negative-csvguard.mjs",
+    "negative:ratioedit": "node tests/negative-ratioedit.mjs",
+    "negative:ratelimit": "node tests/negative-ratelimit.mjs",
+    "negative:openvisit": "node tests/negative-openvisit.mjs",
+    "first-setup": "node tools/first-setup.mjs"
   }
 }

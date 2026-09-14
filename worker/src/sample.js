@@ -45,7 +45,8 @@ const KIDS = [
 const sample = (n) => `${n} (SAMPLE)`
 
 // Initials from the first letters of the first two words: "Ava M. (SAMPLE)" → "AM".
-export const initialsOf = (name) => name.trim().split(/\s+/).slice(0, 2).map((w) => w[0].toUpperCase()).join('')
+// Letters and digits only, so a name like "=SUM(A1) (SAMPLE)" still gets plain initials ("SS").
+export const initialsOf = (name) => name.trim().split(/\s+/).slice(0, 2).map((w) => (w.match(/[\p{L}\p{N}]/u) || ['?'])[0].toUpperCase()).join('')
 
 export const SAMPLE_CHILDREN = KIDS.map(([id, name, room, dob]) => ({
   id, name: sample(name), initials: initialsOf(name), dob, home_room_id: room,

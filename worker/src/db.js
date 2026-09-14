@@ -8,6 +8,12 @@ export const REASON_LABELS = { sick: 'Sick', holiday: 'Holiday', appointment: 'A
 
 const byId = (rows) => new Map(rows.map((r) => [r.id, r]))
 
+export const personView = (p) => ({
+  id: p.id, child_id: p.child_id, name: p.name, relationship: p.relationship, may_pick_up: p.may_pick_up === 1,
+  emergency_contact: p.emergency_contact === 1, active: p.active === 1, phone: p.phone,
+})
+export const absenceView = (a) => ({ id: a.id, child_id: a.child_id, date: a.date, reason: a.reason, reason_label: REASON_LABELS[a.reason], note: a.note })
+
 export const roomView = (r) => ({ id: r.id, name: r.name, age_group: r.age_group, active: r.active === 1, sort: r.sort })
 export const staffView = (s) => ({ id: s.id, name: s.name, initials: s.initials, role: s.role, active: s.active === 1 })
 

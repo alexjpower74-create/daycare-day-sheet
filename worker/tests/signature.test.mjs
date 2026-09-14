@@ -51,7 +51,7 @@ test('limits: 50 strokes and 4 000 points are fine, one more of either is refuse
 
 test('the SVG is built from integers only: the path holds nothing but M, L, digits and spaces', () => {
   const svg = signatureSvg([[40, 150, 120, 60, 200, 140], [300, 20, 310, 180]])
-  assert.equal(svg, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 200"><path d="M40 150 L120 60 L200 140 M300 20 L310 180"/></svg>')
+  assert.equal(svg, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 200"><path d="M40 150 L120 60 L200 140 M300 20 L310 180" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>')
   const d = svg.match(/ d="([^"]*)"/)[1]
   assert.match(d, /^[ML0-9 ]+$/)
   // Even if something odd got past validation, only digits reach the markup.
