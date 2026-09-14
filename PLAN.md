@@ -215,6 +215,12 @@ the Total row equals the column sums; CSV CRLF, quoting of `Smith, "Junior"`, fo
 filename; **fix a time**: reason required, out before in → 400, future → 400, the edit is listed with who and why and the old times,
 and the CSV uses the fixed time; register rows (dob, emergency contact, both signatures as SVG, moves label, recorded-by, edited);
 the demo seed gives non-empty attendance for the last 15 weekdays and today's three meters `at_limit` / `ok` / `over`.
+**First setup for a real centre** (added by the lead): `worker/tools/first-setup.mjs --centre "<name>" --phone "<709…>" --supervisor
+"<name>" --pin <4–6 digits>` (no network, no SAMPLE rows) writes `worker/first-setup.sql` (git-ignored): the centre row with
+`sample = 0`, the six cited ratio rules, and one supervisor with a PBKDF2 hash + salt made exactly as `auth.js` does. It is what
+docs/DEPLOY.md runs with `wrangler d1 execute daycare-day-sheet --remote --file` at deploy time (not tonight). Test: apply the
+migrations and that SQL to a fresh local D1, start the Worker **without** `TEST_MODE`, sign in with that PIN → 200 supervisor,
+`GET /api/info` shows the name with `sample: false`, and `/api/test/reset` → 404.
 M2 negative controls: (f) `negative:utcday` — the copy cuts visits at UTC midnight → the across-midnight test goes red; (g)
 `negative:csvguard` — no formula guard → the CSV test goes red; (h) `negative:ratioedit` — the meter reads the cited defaults instead of
 the saved rule → the edit test goes red; (i) `negative:ratelimit` — the copy never counts wrong PINs → the 429 test goes red; (j)

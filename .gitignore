@@ -9,3 +9,4 @@ playwright-report/
 .negative/
 **/.state-*/
 app/tests/results/
+worker/first-setup.sql
