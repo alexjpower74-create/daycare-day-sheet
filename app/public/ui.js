@@ -65,11 +65,15 @@ export function icon(name, { size = 20, label } = {}) {
 export const avatar = (initials, ageGroup, size = 'md') =>
   h('span', { class: `avatar avatar-${size}`, style: ageGroup ? `--ring: var(--group-${ageGroup})` : null, 'aria-hidden': 'true' }, initials || '')
 
-/** Centre name with the SAMPLE badge. */
-export function centreName(name, sample = true) {
-  return h('span', { class: 'centre' },
-    h('span', { class: 'centre-name' }, name || 'SAMPLE Little Harbour Child Care (demo)'),
-    sample === false ? null : h('span', { class: 'sample-badge' }, 'SAMPLE'))
+/**
+ * Put the centre's name and SAMPLE badge on the page from an API answer (/api/info, today, a note). The name is exactly
+ * `centre_name`: before first setup the API sends "" and the page shows no name, never a guessed one. The badge shows only when
+ * `sample` is true.
+ */
+export function applyCentre(source) {
+  if (!source) return
+  for (const el of document.querySelectorAll('.centre-name')) el.textContent = source.centre_name || ''
+  for (const el of document.querySelectorAll('.centre .sample-badge')) el.hidden = source.sample !== true
 }
 
 /** A ratio pill coloured only through data-state (theme.css). */

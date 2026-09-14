@@ -306,3 +306,48 @@ Each proof was run by swapping in the pre-fix file from HEAD, then restoring the
 - **Office tap sizes:** at 390 the office uses the same 44 px buttons, but the M2 targets sweep covers only the room view and notes. I added no office sweep, because M3's brief does not ask for one.
 - **Today's lists:** "Signature needed" on Today lists children signed in now with a pending signature (what `GET /api/staff/today` gives). A pending signature from a child who has gone home shows at the door, not here. Lead: say if Today should read the 14-day door list instead.
 - **Servers:** every server I started is stopped; 7801, 7803, 7807 and their inspector ports are free.
+
+## M3 follow-up round (2026-09-14)
+
+I merged `main` first (9b670b5: `GET /api/office/follow-ups` in API.md). Today's "Signature needed" / "Not signed out" stay as they are until you say that route is on main.
+
+### (2) Tap targets in the office and the register — DONE (3659f03)
+
+`targets.spec` has two new tests:
+- **Office, at 390 and 1280:** on the demo seed, every office tab; on each tab, every visible button and button-link, plus every `label.switch`; and every button in the Mark away and Fix a time dialogs. Each must be at least 44 × 44 and hit-test to itself, with no sideways scroll on any tab.
+- **Register, at 1280:** its two buttons (Office and Print).
+
+When the page scrolls sideways, the check now names the elements that stick out, measured in page coordinates.
+
+It found two real bugs, both red before the fix:
+1. **At 390 the tab bar slid under the header** (chromium-390): `Error: tap(tab Children) hit-test at 149,25: something else is on top … <span class="centre-name">…`. The bar was `position: sticky; top: 0`, so once the page scrolled it sat under the sticky topbar, where no tab could be tapped. **Fix:** the tab bar scrolls with the page on phones; the 1280 rail stays sticky below the header.
+2. **In WebKit, Rooms and ratios scrolled sideways** (`Received: 141` at 390, `5` at 1280). No element's box stuck out. A throwaway probe hid element types one at a time: switches 141, number inputs 141, **selects 0**. WebKit lays a `<select>` out as wide as its longest option, here the cited age group labels. **Fix:** options carry the short group name ("Pre-school"), and the full cited label and citation show under the picker.
+
+Two CSS guesses made along the way (`min-width: 0` on grid children, and pinning `.aurora` to the viewport) changed nothing in the probe, so I removed them before committing. The sweep is green without them.
+
+After the fixes, the office and register sweeps pass in chromium-390, chromium-1280, webkit-390 and webkit-1280.
+
+### Empty centre name — DONE (this commit)
+
+- **Fix:**
+  - Every page now starts with an empty `#centre-name` and a hidden SAMPLE badge.
+  - `ui.js` `applyCentre(source)` sets the name to exactly `centre_name` and shows the badge only when `sample === true`. It's used by the start page, the room view, both notes, the office and the register.
+  - `<title>`s no longer carry the SAMPLE name, and no `Little Harbour` string is left in `app/public`.
+- **Test** (`centre-name.spec.mjs`):
+  - **Before setup** (chromium-390 and webkit-390): a second real Worker on 7801, migrated and never reset, so there is truly no centre row (`/api/info` answers `centre_name: ""`). On `/`, `/room/`, `/room/note/`, `/note/` and `/office/`, `#centre-name` is empty after `/api/info` answers, no page text or title contains "Little Harbour", and the badge count follows `sample`.
+  - **After setup** (all four projects): the name equals `/api/info`'s `centre_name` and the badge shows.
+- **Proof against the old fallback:** with HEAD's twelve page files swapped in, the before-setup test goes red in both engines: `Error: /: centre name · Expected: "" · Received: "SAMPLE Little Harbour Child Care (demo)"`. With the fix it's green. The restored files were checked with `cmp`.
+
+### Suite
+
+`E2E_PORT=7803 npx playwright test tests/web`: **114 passed, 6 skipped, 0 failed** (5.4 min), chromium and webkit at 390 and 1280. All six skips are deliberate:
+- the phone tap sweep at 1280 (2)
+- the register sweep at 390 (2)
+- the second-Worker test at 1280 (2)
+
+### Needs the lead
+
+- **`sample` before setup:** before any centre row exists, dd1's Worker answers `sample: true` (`worker/src/index.js:118`: `sample: centre ? centre.sample === 1 : true`). API.md only says `centre_name` and `phone` are `""`. So on a real deployment before first setup, the pages show a SAMPLE badge with no name. My pages follow the API as you asked. If the badge should be off before setup, that's a Worker change plus a line in API.md, and my test follows `sample` automatically.
+- **The aurora in `theme.css`:** it was not the cause of the sideways scroll (the probe cleared that), so nothing is needed there.
+
+Every server I started is stopped: 7801, 7803 and their inspector ports are free, and the before-setup D1 state is removed.

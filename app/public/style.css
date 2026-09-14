@@ -327,9 +327,9 @@ html.sheet-open { overflow: hidden; }
 .block { display: block; }
 .office-main { padding-top: 12px; }
 .office-layout { display: grid; gap: 16px; }
+/* On a phone the tab bar scrolls with the page: stuck at the top it slid under the sticky header, where no finger could reach it. */
 .office-tabs {
   display: flex; gap: 6px; overflow-x: auto; scroll-snap-type: x proximity; padding: 2px 2px 8px; margin: 0 -2px;
-  position: sticky; top: var(--office-tabs-top, 0); z-index: 10;
 }
 .office-tab {
   flex: none; scroll-snap-align: start; min-height: var(--tap); padding: 10px 16px; border-radius: 999px;

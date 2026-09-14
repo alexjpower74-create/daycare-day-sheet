@@ -2,7 +2,7 @@
 // A 404 or 410 removes the whole note from the page and shows only the API's own text in #note-error. Any other failure keeps
 // the last note and says it could not refresh.
 import { api } from '/api.js'
-import { $, renderIf, poll } from '/ui.js'
+import { $, renderIf, poll, applyCentre } from '/ui.js'
 import { renderNote } from '/note/render.js'
 
 const token = new URLSearchParams(location.search).get('t')
@@ -20,7 +20,7 @@ function showNote(note) {
   staleEl.hidden = true
   noteEl.hidden = false
   printBtn.hidden = false
-  if (note.centre_name) $('#centre-name').textContent = note.centre_name
+  applyCentre(note)
   document.title = `Daily note: ${note.child.name}`
   renderIf(noteEl, note, renderNote)
 }
@@ -35,7 +35,7 @@ function showGone(message) {
   errorEl.textContent = message
   errorEl.hidden = false
   document.title = 'Daily note'
-  api.info().then((i) => { if (i.centre_name) $('#centre-name').textContent = i.centre_name }).catch(() => {})
+  api.info().then(applyCentre).catch(() => {})
 }
 
 async function load() {
