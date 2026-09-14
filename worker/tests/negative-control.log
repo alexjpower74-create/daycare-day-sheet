@@ -1222,3 +1222,38 @@ not ok 1 - attendance: a visit open today is still here, with no Not signed out 
       }
     
 RESULT: RED as intended (exit 1); red tests: attendance: a visit open today is still here, with no Not signed out flag; the next day the same visit is not signed out
+
+=== negative:info-sample — 2026-09-14T13:12:07.017Z
+break: index.js info answers sample: true when the centre row does not exist yet
+patched: src/index.js
+run: node tests/run.mjs --fresh --api-only --grep ^info before the centre row exists (PORT 7805)
+== api: fresh Worker on http://127.0.0.1:7805 (state .state-7805)
+# tests 1
+# pass 0
+# fail 1
+# tests 2
+# pass 2
+# fail 0
+not ok 1 - info before the centre row exists: centre_name "", phone "", sample false; a reset then makes it the SAMPLE centre
+  ---
+  duration_ms: 56.856159
+  type: 'test'
+  location: 'worker/tests/api-empty.test.mjs:6:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    no centre yet: no name, no phone, no SAMPLE badge
+    + actual - expected
+    
+      [
+        '',
+        '',
+    +   true
+    -   false
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: ''
+    1: ''
+RESULT: RED as intended (exit 1); red tests: info before the centre row exists: centre_name "", phone "", sample false; a reset then makes it the SAMPLE centre

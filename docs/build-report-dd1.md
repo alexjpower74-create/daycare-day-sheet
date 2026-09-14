@@ -2,6 +2,14 @@
 
 A record, not a queue. Newest milestone at the top.
 
+## Next round item 4 — `sample: false` before the centre row exists — DONE
+
+- **Change (`index.js`).** With no centre row, `/api/info` now answers `sample: false` (with `centre_name` and `phone` still `""`), so a real deployment shows no SAMPLE badge before first setup.
+- **Empty-D1 test.** `tests/api-empty.test.mjs` runs first, on the migrated D1 the run just started, before any reset or first setup. It checks `centre_name` `""`, `phone` `""`, `sample` false, then that `POST /api/test/reset` gives the SAMPLE centre with `sample: true`. `tests/run.mjs` runs it only on a Worker it started, never on a reused one.
+- **After first setup.** The setup stage still asserts `sample: false`.
+- **Control `negative:info-sample`.** The copy answers `true` with no centre row. It went red: `+ true` / `- false`.
+- **Verified.** `npm test` exit 0: unit 32, empty-D1 1, API 43, setup 1.
+
 ## Next round — Still here (item 2) and door pills (item 3) — DONE
 
 ### The M4 commits, guard-checked after the fact (lead's request)
