@@ -53,7 +53,7 @@ JSON in, JSON out. Errors are always
 | `POST /api/signin` | anyone | `{ pin }` → 200 `{ token, role, staff: { id, name, initials }, expires_at }` (12 hours). Wrong PIN → 401 `"That PIN is not right."` `field: "pin"`. |
 | `POST /api/door/unlock` | anyone | `{ pin }` → 200 `{ token, role: "door", expires_at }` (30 days). Wrong PIN → 401 as above; an educator's PIN → 403 `forbidden` `"Only the supervisor can set up this tablet."` |
 | `POST /api/signout` | any token | → 200 `{ ok: true }`; the token stops working. |
-| `GET /api/info` | anyone | → `{ centre_name, sample, phone, zone, today, date_label, long_label, now, now_local, time_label }`. Before the centre row exists (a migrated, empty D1 before first setup or `POST /api/test/reset`), `centre_name` and `phone` are `""`; pages then show no centre name rather than a guessed one. |
+| `GET /api/info` | anyone | → `{ centre_name, sample, phone, zone, today, date_label, long_label, now, now_local, time_label }`. Before the centre row exists (a migrated, empty D1 before first setup or `POST /api/test/reset`), `centre_name` and `phone` are `""` and `sample` is `false`; pages then show no centre name and no SAMPLE badge. |
 
 ## SAMPLE centre (what `POST /api/test/reset` creates; tests rely on these ids)
 
@@ -215,12 +215,13 @@ The link is `/note/?t=<token>`: 32 random bytes (43 base64url characters), store
 
 **Attendance.** Each visit is cut at every local midnight it crosses; each part belongs to its local date. For every child and
 date in range: `status` is `present` (a part with minutes, or an open visit), `away` (an absence), `not_booked` (not a booked day),
-`missing` (booked, on or before today, no visit, no absence), or `upcoming` (booked, after today, nothing recorded yet). An **open** visit (never signed out) counts as present with 0 minutes and a
-`"Not signed out"` flag until a supervisor fixes the time.
+`missing` (booked, on or before today, no visit, no absence), or `upcoming` (booked, after today, nothing recorded yet). An **open** visit (not signed out yet) counts as present with 0 minutes. If its date is **before today** it carries `open: true`
+and the `"Not signed out"` flag until a supervisor fixes the time. If its date is **today** the child is simply still here:
+`open: true`, `still_here: true`, no flag and no "Fix a time" (the minutes appear once they are signed out).
 ```
 { "from": "2026-09-14", "to": "2026-09-20", "dates": ["2026-09-14", …],
   "children": [{ "id": "c_ava", "name": "Ava M. (SAMPLE)", "room_name": "Infant room",
-    "days": { "2026-09-14": { "status": "present", "minutes": 90, "open": false, "absence": null,
+    "days": { "2026-09-14": { "status": "present", "minutes": 90, "open": false, "still_here": false, "absence": null,
       "parts": [{ "visit_id": "…", "in_label": "10:30 PM", "out_label": "1:15 AM Sep 15", "minutes": 90, "continues": true, "continued": false }] } },
     "minutes": 165, "days_present": 2, "days_away": 0, "away_by_reason": { "sick": 0, "holiday": 0, "appointment": 0, "family": 0, "other": 0 }, "not_signed_out": 0 }],
   "totals": { "minutes": 165, "child_days": 2 } }
@@ -231,14 +232,14 @@ the range, and Σ over dates of `days[date].minutes` = `minutes`.
 **attendance.csv** header exactly
 `Date,Child,Room,In,Dropped off by,Out,Picked up by,Minutes,Hours,Away,Note` — one row per visit part and per absence, ordered by
 date, room sort, child name, time. `In`/`Out` are time labels, with `" Sep 15"` added when that end is on another date. A part that
-goes past midnight has Note `Continues past midnight`; the next date's part has `Continued from the day before`. An open visit has
-Out empty, Minutes `0` and Note `Not signed out`. An absence row has In/Out/people empty, Minutes `0`, Away = the reason label,
+goes past midnight has Note `Continues past midnight`; the next date's part has `Continued from the day before`. An open visit has Out empty, Minutes `0` and Note `Not signed out`
+(or `Still here` when its date is today). An absence row has In/Out/people empty, Minutes `0`, Away = the reason label,
 Note = its note. `Hours` = minutes / 60 with 2 decimals. Lines end CRLF; a cell with a comma, quote or line break is quoted with
 quotes doubled; a cell starting with `=`, `+`, `-`, `@`, tab or CR gets a leading `'` (formula guard).
 
 **attendance-summary.csv** header exactly
 `Child,Room,Days present,Minutes,Hours,Days away,Sick,Holiday,Appointment,Family reasons,Other,Not signed out` — one row per child
-who was registered on any date in the range, then a last row `Total,,<child days>,<minutes>,<hours>,<days away>,…`.
+who was registered on any date in the range, then a last row `Total,,<child days>,<minutes>,<hours>,<days away>,…`. `Not signed out` counts open visits dated before today only.
 
 **Register** (one homeroom, one date):
 ```
@@ -247,7 +248,8 @@ who was registered on any date in the range, then a last row `Total,,<child days
     "visits": [visit…], "moves": [{ "label": "Went to Toddler room 10:00 AM, back 10:40 AM" }] }],
   "kept_note": "Daily registers are kept for at least 7 years (NLR 39/17 s.45(3))." }
 ```
-Rows are the children with a visit or a placement in that room that day.
+Rows are the children with a visit or a placement in that room that day. A visit with no `out_at` reads "Still here" on
+today's register and "Not signed out" on an earlier date's.
 
 ## Demo seed (`POST /api/test/seed { "scenario": "demo" }`, M2)
 

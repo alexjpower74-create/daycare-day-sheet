@@ -328,5 +328,25 @@ signs Ava out → the office attendance shows the pair → the next day the link
 the Worker suite, every negative control and the whole Playwright suite, takes `pwshot` screenshots into `docs/shots/` from `npm run demo`,
 writes README / DEPLOY / build report, pushes the private repo, closes the slice tabs by id, removes worktrees, writes the status file.
 
+## Next round (queued by the lead; each slice gets it in its next prompt)
+
+**For dd1**
+1. `GET /api/office/follow-ups` and the dated door label for a visit left open from an earlier day (M4, already prompted).
+2. **Still here** (API.md, 6ab3353): an open visit dated today has `still_here: true` in attendance, no "Not signed out" flag; the
+   attendance CSV Note reads `Still here`; the summary's `Not signed out` counts only earlier dates. Tests, and a negative control
+   whose copy flags today's open visit as not signed out.
+3. Door card status pills stay on one line at 1024×768 ("In since 7:40 AM" wraps today).
+4. Before the centre row exists, `GET /api/info` answers `sample: false` (API.md); today `worker/src/index.js` says `true`, so a real
+   deployment would show a SAMPLE badge before setup. API test on an empty D1.
+
+**For dd2**
+1. Replace both `alert()` calls in `office/register/register.js` with an on-page `role="alert"` message; a spec opens the register
+   with no room and sees it.
+2. Today tab: "Signature needed" and "Not signed out" from `GET /api/office/follow-ups` once "Merge dd1 M4" is on main; show dates
+   as labels ("Fri Sep 4"), never ISO.
+3. **Still here** display: attendance cells for today's open visits show "Still here" with no flag and no "Fix a time"; the register
+   reads "Still here" for today and "Not signed out" for an earlier date.
+4. Office tap-size sweep and the empty centre name (already prompted).
+
 ## Open questions
 None blocking. Anything that needs Alexander goes under NEEDS ALEXANDER in the status file.
