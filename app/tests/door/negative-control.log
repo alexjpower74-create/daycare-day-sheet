@@ -105,3 +105,110 @@ run: npx playwright test tests/door/door.spec.mjs --project chromium-tablet --gr
     .negative/door-stale-sheet/results/door-door-a-change-on-anot-ba6b7--starts-again-with-Sign-out-chromium-tablet/test-failed-1.png
   1 failed
 RESULT: RED as intended
+
+=== door negative:pickup-list — 2026-09-14T14:03:07.452Z
+break: door.js peopleStep offers every person at pick-up, may_pick_up or not
+patched: app/public/door/door.js
+run: npx playwright test tests/door/door.spec.mjs --project chromium-tablet --grep "not on the list: the neighbour may drop off" (E2E_PORT 7806)
+  ✘  1 [chromium-tablet] › tests/door/door.spec.mjs:151:1 › not on the list: the neighbour may drop off but is not offered at pick-up; Someone else blocks; the grandmother signs Ava out (9.2s)
+    Error: the pick-up list does not contain Rick D.
+    expect(locator).toHaveCount(expected) failed
+    Locator:  locator('button.person[data-person="p_ava_neighbour"]')
+    Expected: 0
+    Received: 1
+           - unexpected value "1"
+    .negative/door-pickup-list/results/door-door-not-on-the-list--68743-e-grandmother-signs-Ava-out-chromium-tablet/test-failed-1.png
+  1 failed
+RESULT: RED as intended
+
+=== door negative:over-banner — 2026-09-14T14:03:20.769Z
+break: door.js overBanner never draws #over-banner, whatever the meter says
+patched: app/public/door/door.js
+run: npx playwright test tests/door/door.spec.mjs --project chromium-tablet --grep "the ratio moment on the tablet" (E2E_PORT 7806)
+  ✘  1 [chromium-tablet] › tests/door/door.spec.mjs:128:1 › the ratio moment on the tablet: with Marie and three infants in, signing Owen in shows the red over banner (9.5s)
+    Error: the over banner
+    expect(locator).toHaveText(expected) failed
+    Locator: locator('#over-banner')
+    Expected: "Infant room is over the ratio. Tell the room staff."
+    Error: element(s) not found
+    .negative/door-over-banner/results/door-door-the-ratio-moment-373e1-n-shows-the-red-over-banner-chromium-tablet/test-failed-1.png
+  1 failed
+RESULT: RED as intended
+
+=== door negative:overlay — 2026-09-14T14:03:34.375Z
+break: door.css puts a transparent ::after layer over .action-wrap, so a finger lands on the layer, not on #action-in
+patched: app/public/door/door.css
+run: npx playwright test tests/door/door.spec.mjs --project chromium-tablet --grep "sign in by real taps and a drawn signature" (E2E_PORT 7806)
+  ✘  1 [chromium-tablet] › tests/door/door.spec.mjs:87:1 › sign in by real taps and a drawn signature: the card says In since 9:00 AM, and the API and the register hold the visit with its signature (1.0s)
+    Error: tap(Sign in) hit-test at 512,223: something else is on top
+    Expected: ""
+    Received: "<div class=\"action-wrap\"><button type=\"button\" id=\"action-in\" class=\"btn-door btn-primary btn-huge\">Sign in</button></div>"
+    > 84 |   expect(await hitTest(locator, x, y), `tap(${label}) hit-test at ${Math.round(x)},${Math.round(y)}: something else is on top`).toBe('')
+    .negative/door-overlay/results/door-door-sign-in-by-real--4e543-he-visit-with-its-signature-chromium-tablet/test-failed-1.png
+  1 failed
+RESULT: RED as intended
+
+=== door negative:tap-after-stroke — 2026-09-14T14:03:39.469Z
+break: door.js onPress no longer acts on the touch pointerup, so Done and Clear wait for a click Chromium drops after a fast stroke
+patched: app/public/door/door.js
+run: npx playwright test tests/door/door.spec.mjs --project chromium-tablet --grep "sign in by real taps and a drawn signature" (E2E_PORT 7806)
+  ✘  1 [chromium-tablet] › tests/door/door.spec.mjs:87:1 › sign in by real taps and a drawn signature: the card says In since 9:00 AM, and the API and the register hold the visit with its signature (1.0m)
+    Error: page.waitForResponse: Test timeout of 60000ms exceeded.
+    .negative/door-tap-after-stroke/results/door-door-sign-in-by-real--4e543-he-visit-with-its-signature-chromium-tablet/test-failed-1.png
+  1 failed
+RESULT: RED as intended
+
+=== door negative:stale-label — 2026-09-14T14:04:43.753Z
+break: worker db.js status labels every open visit "In since …", whatever date it was opened
+patched: worker/src/db.js
+run: npx playwright test tests/door/door.spec.mjs --project chromium-tablet --grep "a visit left open from last week" (E2E_PORT 7806)
+  ✘  1 [chromium-tablet] › tests/door/door.spec.mjs:268:1 › a visit left open from last week: the card says Still signed in from Tue Sep 8, 8:05 AM. Not signed out. (8.9s)
+    Error: the card tells the truth about an old open visit
+    expect(locator).toContainText(expected) failed
+    Locator: locator('button.child[data-child="c_ruby"]')
+    Expected substring: "Still signed in from Tue Sep 8, 8:05 AM. Not signed out."
+    Received string:    "RERuby E. (SAMPLE)Preschool roomIn since 8:05 AM"
+           - unexpected value "RERuby E. (SAMPLE)Preschool roomIn since 8:05 AM"
+    .negative/door-stale-label/results/door-door-a-visit-left-ope-cad54-p-8-8-05-AM-Not-signed-out--chromium-tablet/test-failed-1.png
+  1 failed
+RESULT: RED as intended
+
+=== door negative:null-text — 2026-09-14T14:04:56.664Z
+break: door.js drawGrid hands replaceChildren the null for a missing Not booked today section
+patched: app/public/door/door.js
+run: npx playwright test tests/door/door.spec.mjs --project chromium-tablet --grep "grid: every SAMPLE child" (E2E_PORT 7806)
+  ✘  1 [chromium-tablet] › tests/door/door.spec.mjs:61:1 › grid: every SAMPLE child with the status the API gives, Isla under Not booked today, and the room chips filter (9.3s)
+    Error: no stray text in the filtered grid
+    expect(locator).not.toContainText(expected) failed
+    Locator: locator('#app')
+    Expected pattern: not /null|undefined/
+    Received string: "CHChloe H. (SAMPLE)Toddler roomNot in yetELEmma L. (SAMPLE)Toddler roomNot in yetFDFinn D. (SAMPLE)Toddler roomNot in yetJWJack W. (SAMPLE)Toddler roomNot in yetLFLeo F. (SAMPLE)Toddler roomNot in yetMSMaya S. (SAMPLE)Toddler roomNot in yetnull"
+           - unexpected value "CHChloe H. (SAMPLE)Toddler roomNot in yetELEmma L. (SAMPLE)Toddler roomNot in yetFDFinn D. (SAMPLE)Toddler roomNot in yetJWJack W. (SAMPLE)Toddler roomNot in yetLFLeo F. (SAMPLE)Toddler roomNot in yetMSMaya S. (SAMPLE)Toddler roomNot in yetnull"
+    .negative/door-null-text/results/door-door-grid-every-SAMPL-9bf2a-y-and-the-room-chips-filter-chromium-tablet/test-failed-1.png
+  1 failed
+RESULT: RED as intended
+
+=== door negative:pill-wrap — 2026-09-14T14:05:09.997Z
+break: door.css places .status-pill in grid column 2 (beside the avatar, about 120 px) instead of across the card
+patched: app/public/door/door.css
+run: npx playwright test tests/door/door.spec.mjs --project chromium-tablet --grep "status pills: short labels stay on one line" (E2E_PORT 7806)
+  ✘  1 [chromium-tablet] › tests/door/door.spec.mjs:288:1 › status pills: short labels stay on one line at 1024×768; the long Still signed in label wraps inside its box (874ms)
+    Error: In since 12:45 PM stays on one line
+    Expected: 1
+    Received: 2
+    .negative/door-pill-wrap/results/door-door-status-pills-sho-890e9--label-wraps-inside-its-box-chromium-tablet/test-failed-1.png
+  1 failed
+RESULT: RED as intended
+
+=== door negative:stale-sheet — 2026-09-14T14:05:14.902Z
+break: door.js submit no longer restarts the sheet on already_in / not_in / bad_state; it only shows the text and re-enables Done
+patched: app/public/door/door.js
+run: npx playwright test tests/door/door.spec.mjs --project chromium-tablet --grep "a change on another device while the sheet is open" (E2E_PORT 7806)
+  ✘  1 [chromium-tablet] › tests/door/door.spec.mjs:324:1 › a change on another device while the sheet is open: the 409 message shows and the sheet starts again with Sign out (9.4s)
+    Error: expect(locator).toHaveText(expected) failed
+    Locator: locator('#sheet-notice')
+    Expected: "Ava M. (SAMPLE) is already signed in."
+    Error: element(s) not found
+    .negative/door-stale-sheet/results/door-door-a-change-on-anot-ba6b7--starts-again-with-Sign-out-chromium-tablet/test-failed-1.png
+  1 failed
+RESULT: RED as intended

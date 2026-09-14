@@ -2,6 +2,27 @@
 
 A record, not a queue. Newest milestone at the top.
 
+## Final round — dd2's three door findings — DONE
+
+1. **After a 409 the sheet starts again (283f9a3).**
+   - Change: on `already_in`, `not_in` or `bad_state`, `submit` shows the API's message (`#sheet-notice`, `role="alert"`), re-reads the child and returns to step 1. A refused Sign in becomes Sign out.
+   - Spec: open Ava's sheet for Sign in, sign her in through the API behind the tablet's back, then Done on the tablet. It expects "Ava M. (SAMPLE) is already signed in.", then `#action-out` with no pad, then a real sign-out.
+   - **Control `stale-sheet`** (the copy keeps the stale sheet) went red: `#sheet-notice` was not found.
+2. **The centre name and badge come only from `/api/info` (0d07ce8, then 3a6212d).**
+   - Change: `index.html` no longer hard-codes the SAMPLE name, badge or title. `door.js` sets the name and title from `centre_name`, and shows the badge in the header and the sheet only when `sample === true`.
+   - Spec: with `/api/info` routed to 500 it expects an empty `#centre-name`, no visible `.sample-badge`, and no centre name in the title. Before the fix it failed with `Received "SAMPLE Little Harbour Child Care (demo)"`.
+   - **My mistake: 0d07ce8 was committed with this spec still red.** My command piped Playwright through `grep | head`, so `&&` saw grep's exit status, not the test's. The badge had stayed visible because theme.css gives `.sample-badge` `display: inline-flex`, which overrides the `hidden` attribute.
+   - **3a6212d fixes it** with `.door [hidden] { display: none !important }`. The same override had also left `#back` visible on the confirmation and an empty `#chips` row on the setup screen.
+   - From then on every run recorded Playwright's own exit code before a commit.
+3. **A failed `/api/info` no longer stops the grid (f951d65).**
+   - Change: `refresh()` fetches info and the children list with `Promise.allSettled`. The grid updates from the children list, and only the name, date and clock wait for info.
+   - Spec: with `/api/info` routed to 500 the tablet is set up, Ava is signed in through the API, and one 15 s poll is advanced with `page.clock`. Her card must turn `in` with no offline line. Before the fix no card rendered.
+
+**Verified at f951d65 (Playwright exit codes read directly):**
+- `E2E_PORT=7804 npx playwright test tests/door`: **34/34** on chromium-tablet and webkit-tablet.
+- `NEG_PORT=7806 node tests/door/negative-all.mjs`: **8 of 8 red**. pickup-list, over-banner, overlay, tap-after-stroke, stale-label, null-text, pill-wrap, stale-sheet.
+- The setup screenshots changed only where the empty chip row is now hidden.
+
 ## Cross-review of dd2 office — DONE (read only; main at the merge before this commit)
 
 Read: `app/public/office/office.js`, `office/attendance.js`, `office/dates.js`, `office/register/register.js` and `app/public/api.js`, against docs/API.md and the Worker. A subagent did the first read. I re-read every cited line before writing it here. Line numbers are as of that merge.
