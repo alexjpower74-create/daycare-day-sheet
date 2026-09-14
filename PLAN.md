@@ -330,14 +330,14 @@ writes README / DEPLOY / build report, pushes the private repo, closes the slice
 
 ## Next round (queued by the lead; each slice gets it in its next prompt)
 
-### dd1
+**For dd1**
 1. `GET /api/office/follow-ups` and the dated door label for a visit left open from an earlier day (M4, already prompted).
 2. **Still here** (API.md, 6ab3353): an open visit dated today has `still_here: true` in attendance, no "Not signed out" flag; the
    attendance CSV Note reads `Still here`; the summary's `Not signed out` counts only earlier dates. Tests, and a negative control
    whose copy flags today's open visit as not signed out.
 3. Door card status pills stay on one line at 1024×768 ("In since 7:40 AM" wraps today).
 
-### dd2
+**For dd2**
 1. Replace both `alert()` calls in `office/register/register.js` with an on-page `role="alert"` message; a spec opens the register
    with no room and sees it.
 2. Today tab: "Signature needed" and "Not signed out" from `GET /api/office/follow-ups` once "Merge dd1 M4" is on main; show dates
