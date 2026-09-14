@@ -70,6 +70,10 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
+/* The hidden attribute always wins. A class with its own display (like .sample-badge) would otherwise override the
+   browser's [hidden] rule and keep a "hidden" element on screen (dd1 found it on the door's SAMPLE badge). */
+[hidden] { display: none !important; }
+
 html, body {
   margin: 0;
   background: var(--ground);
