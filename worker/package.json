@@ -22,6 +22,7 @@
     "first-setup": "node tools/first-setup.mjs",
     "negative:followups": "node tests/negative-followups.mjs",
     "negative:stillhere": "node tests/negative-stillhere.mjs",
-    "negative:info-sample": "node tests/negative-info-sample.mjs"
+    "negative:info-sample": "node tests/negative-info-sample.mjs",
+    "negative:homeroom": "node tests/negative-homeroom.mjs"
   }
 }
