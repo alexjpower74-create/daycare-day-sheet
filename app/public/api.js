@@ -1,6 +1,5 @@
 // The one door to docs/API.md for the room view, the daily notes and the office. Same-origin fetch('/api/…') only.
 // Errors come back as ApiError carrying the API's own `error` text, `code` and `field`, so pages show them as they are.
-// Development only: `?mock=1` (remembered for the tab) answers from room/api.mock.js with the same shapes. Tests never use it.
 
 export class ApiError extends Error {
   constructor(status, body) {
@@ -11,26 +10,10 @@ export class ApiError extends Error {
   }
 }
 
-const MOCK_KEY = 'daycare-day-sheet:mock'
 const TOKEN_KEY = 'daycare-day-sheet:staff-token'
 const STAFF_KEY = 'daycare-day-sheet:staff'
 
-function useMock() {
-  try {
-    const q = new URLSearchParams(location.search).get('mock')
-    if (q === '1') sessionStorage.setItem(MOCK_KEY, '1')
-    if (q === '0') sessionStorage.removeItem(MOCK_KEY)
-    return sessionStorage.getItem(MOCK_KEY) === '1'
-  } catch { return false }
-}
-const MOCK = useMock()
-let mockModule = null
-
 async function send(method, path, body, headers) {
-  if (MOCK) {
-    mockModule ??= await import('./room/api.mock.js')
-    return mockModule.handle(method, path, body, headers)
-  }
   let r
   try {
     r = await fetch(path, {

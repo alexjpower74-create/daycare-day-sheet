@@ -8,6 +8,7 @@
     "rules": "node tools/check-rules.mjs",
     "test:worker": "cd worker && npm test",
     "test:negative": "cd worker && npm run negative",
-    "test:e2e": "cd app && npx playwright test"
+    "test:e2e": "cd app && npx playwright test",
+    "test:e2e:negative": "cd app && npm run negative:door && npm run negative:web && npm run negative:journey"
   }
 }

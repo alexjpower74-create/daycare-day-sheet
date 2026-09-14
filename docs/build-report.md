@@ -11,6 +11,9 @@ slice's own tree. Pass/fail comes from each command's own exit code, echoed insi
 |---|---|---|---|
 | dd1 M1 | `7c6c534` | Worker core: register, live ratios, logs, daily note, parent links | unit 20 / 0 / 0, API 17 / 0 / 0; negative controls 5 of 5 red (count, limit, pickup, expiry, expiry-never) |
 | dd2 M1 | `9370b07` | room view, staff note, parent note (against a mock) | page check PASS in chromium-390, chromium-1280, webkit-390, webkit-1280; overlay control red in all four |
+| dd2 M2 | `7b6f409` | cross-review of dd1 M1 (237 route checks, 2 findings) + Playwright room/note/targets on the real Worker | web 50 / 0 / 2 skipped (tap-size sweep is phone-only); negative controls 4 of 4 red (card-state, over-colour, expiry-page, overlay) |
+| dd1 M2 | `9f8efad` | every office route, attendance cut at local midnight, CSVs, fix a time, register, demo seed, first-setup tool | unit 31 / 0 / 0, API 40 / 0 / 0, setup 1 / 0 / 0 (Worker without TEST_MODE: real PIN signs in, reset 404); negative controls 10 of 10 red (+ utcday, csvguard, ratioedit, ratelimit, openvisit) |
+| dd1 M3a | `8bf2c61` | contract changes: attendance `upcoming`, note `rooms_today` + activity room ids, demo seed without moving a child | unit 31 / 0 / 0, API 40 / 0 / 0, setup 1 / 0 / 0; negative controls 10 of 10 red |
 
 ## Rules check
 
