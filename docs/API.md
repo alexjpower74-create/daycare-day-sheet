@@ -53,7 +53,7 @@ JSON in, JSON out. Errors are always
 | `POST /api/signin` | anyone | `{ pin }` → 200 `{ token, role, staff: { id, name, initials }, expires_at }` (12 hours). Wrong PIN → 401 `"That PIN is not right."` `field: "pin"`. |
 | `POST /api/door/unlock` | anyone | `{ pin }` → 200 `{ token, role: "door", expires_at }` (30 days). Wrong PIN → 401 as above; an educator's PIN → 403 `forbidden` `"Only the supervisor can set up this tablet."` |
 | `POST /api/signout` | any token | → 200 `{ ok: true }`; the token stops working. |
-| `GET /api/info` | anyone | → `{ centre_name, sample, phone, zone, today, date_label, long_label, now, now_local, time_label }` |
+| `GET /api/info` | anyone | → `{ centre_name, sample, phone, zone, today, date_label, long_label, now, now_local, time_label }`. Before the centre row exists (a migrated, empty D1 before first setup or `POST /api/test/reset`), `centre_name` and `phone` are `""`; pages then show no centre name rather than a guessed one. |
 
 ## SAMPLE centre (what `POST /api/test/reset` creates; tests rely on these ids)
 
