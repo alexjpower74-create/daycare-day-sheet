@@ -2,6 +2,101 @@
 
 A record, not a queue. Newest milestone at the top.
 
+## M3 — Worker changes (a) and the door tablet (b) — DONE
+
+### (a) Worker changes from the lead's M2 answers — commit 8bf2c61, on its own so dd2 can merge it
+
+- **`upcoming`:** a booked date after today with nothing recorded. `missing` now means today or earlier only. `buildAttendance` takes `today`.
+  - Unit test: the same range seen from Sep 15 and from Sep 16, where today itself is `missing`.
+  - API test: Sep 14–20 seen on Monday (`upcoming` from Sep 16), then seen on Thursday (Sep 16 and 17 now `missing`, Sep 18 still `upcoming`).
+- **Note `rooms_today` and `activities[].room_id`:** the note test first reads Ava's note after her move, when only the infant room has a line. `activities` lists that one room and `rooms_today` lists both. It then checks the full note with both lines, Ben's single room, and `[]` for a day with no placements.
+- **Demo seed:** Marie with 3 infants (`at_limit`), Kevin with all 6 toddlers (`over`, needs 1), Priya with 6 pre-schoolers (`ok`), nobody moved. The test checks those meters and that the toddler room holds exactly the six toddlers.
+  - The visit never signed out moved from Finn to **Ruby**, who is not signed in today. Finn is now one of today's toddlers, and the database allows only one open visit per child, so his old open visit would have blocked his sign-in.
+- **Verified:** `npm test` exit 0 (unit 31, API 40, setup 1), and all 10 Worker negative controls red again before the commit.
+
+### (b) The door tablet — what was built
+
+`app/public/door/`:
+- **`index.html`:** a solid ground with no aurora, and a sticky header with the centre name, SAMPLE, the long date and the time, all from `/api/info`.
+- **`door.css`:** the door's own styles. It does **not** load dd2's `style.css`; tokens come from theme.css only, and ratio colours only through `[data-state]`.
+- **`door-api.js`:** the page's only way to the API. The token is kept in `localStorage` under `daycare-day-sheet:door-token`, and a 401 forgets it, so "Set up this tablet" comes back.
+- **`pad.js`:** Pointer Events, `setPointerCapture`, and integer strokes in the API's 600×200 box whatever the pad's size on screen. Strokes of 1 point are dropped, 50 strokes and 4 000 points are the most kept, and Done stays disabled until the usable ink spans 20 units.
+- **`door.js`:**
+  - **Setup:** dd2's `/keypad.js` and `/ui.js` imported read-only (`h`, `avatar`, `icon`, `whenIdle`), as PLAN allows.
+  - **Grid:** room chips, cards 4 across at 1024 and at least 132 px tall, not-booked children in a quieter `#not-booked` section, and a "Signature needed" chip.
+  - **Full-screen sheet, step by step, with `#back` at every step:**
+    1. `#action-in` / `#action-out`, plus `#add-signature` when a recorded time is waiting.
+    2. The people list; pick-up offers only `may_pick_up`. `#someone-else` opens `#not-on-list` (`role="alert"`).
+    3. The pad, with `#pad-clear` and `#pad-done`.
+    4. `#confirm` with a check, the time, "by …", the meter pill and its label, `#over-banner` (`role="alert"`) when the room is now over, and `#confirm-done`.
+  - **Timers:** polls every 15 s and after every write; a sheet left alone closes after 45 s; a confirmation closes after 6 s or on Done.
+
+Every hook and word from PLAN.md's Design section is used. The only ids not in PLAN's hook list are `#confirm-done` (the "Done" on the confirmation), `#date-line`, `#time-line`, `#children` and `#not-booked`.
+
+### Verified, and how it could have failed
+
+`E2E_PORT=7804 npx playwright test tests/door`: **24/24 passed** (chromium-tablet and webkit-tablet, 12 each).
+
+`door.spec.mjs`:
+- **Setup:** the wrong-PIN text **and** the 401 via `waitForResponse`; the educator's 403 text; the supervisor PIN opens the grid, and it stays set up after a reload.
+- **Grid:** all 19 cards with the API's `data-status` and label, Isla alone under Not booked today, the header date and time, and chips filtering the grid.
+- **Sign in by real taps and a drawn signature:** "In since 9:00 AM" on the card, the door API agrees, and the office register holds the drawn stroke (more than 6 `L` segments).
+- **The ratio moment:** the banner text, `role="alert"`, the pill's `stateColour` equals `STATE_RGB.over`, and the meter label.
+- **Not on the list:** the neighbour is on the drop-off list but not the pick-up list; the block has all three lines and the API still says `in`; Joan signs Ava out and the card reads "Gone home at 9:00 AM".
+- **Add a signature:** the time and `in_recorded_by` stay, `awaiting_signature` clears, and the chip goes.
+- **Back and Done:** Back at every step; Done disabled before ink, after a single tap (a dot) and after Clear; going back never signs anyone in.
+- **Timers:** using `page.clock`, the sheet is open at 44 s and closed at 46 s; the confirmation is shown at 5 s and gone at 7 s.
+- **Dead token:** after `POST /api/signout` with the tablet's own token, the next tap shows "Set up this tablet" and the token is gone.
+
+`targets.spec.mjs`:
+- Every visible button and key on the keypad, grid, each sheet step, the block, the pad and the confirmation is at least 72 px and passes `expectTapTarget`'s `elementFromPoint` hit-test.
+- The pad is at least 600×200 at 1024; SAMPLE is visible on every screen; there is no horizontal scroll.
+- `#action-in` contrast is at least 4.5.
+- At 768×1024 portrait the same checks pass, and the pad is 600+ px wide and fully on screen.
+
+Screenshots of both engines are in `app/tests/door/shots/` (22). I looked at the setup keypad, grid, signed pad, over-banner confirmation and not-on-the-list block: all readable, nothing empty.
+
+**Door negative controls:** `NEG_PORT=7806 node tests/door/negative-all.mjs` — **all 4 red**, logged in `app/tests/door/negative-control.log` with no home-folder paths.
+
+| control | break in the copy | red test and what it saw |
+|---|---|---|
+| (k) `negative-pickup-list` | `peopleStep` offers every person at pick-up | not on the list: "the pick-up list does not contain Rick D." — expected 0, received 1 |
+| (l) `negative-over-banner` | `overBanner` never draws `#over-banner` | the ratio moment: "the over banner" — element not found |
+| (m) `negative-overlay` | a transparent `::after` layer over `.action-wrap` | sign in: `tap(Sign in) hit-test at 512,225: something else is on top`, received the `.action-wrap` div |
+| (n, added) `negative-tap-after-stroke` | Done and Clear act on click only | sign in: `page.waitForResponse: Test timeout` (the Done tap is lost) |
+
+### A real bug the first run found: Chromium drops the tap on Done right after a fast stroke
+
+- **What happened.** In the first run, every chromium-tablet flow that signs failed, while WebKit passed. Done and Clear did nothing after the helper's touch drag.
+- **What throwaway probes showed** (not committed):
+  - Pointer events fire normally, and the finger lifts at the end of the drag.
+  - Chromium sends no `click` for the next tap. It sends none at 250 or 500 ms after the stroke, and does at 900 ms or after a slow stroke that holds still.
+  - The same fast drag on the step title does not do it. The pad with `touch-action: auto` does not do it. Disabling pointer capture changes nothing.
+  - So it is Chromium treating that tap as stopping a fling after a fast release on a `touch-action: none` element.
+- **Why the page fixes it.** A parent reaches for Done well inside 900 ms, so this would lose real taps on a Chromium tablet. The pad must keep `touch-action: none`, or a finger pans the page.
+- **The fix.** Done and Clear (`onPress` in door.js) also act on a touch `pointerup` that started on the button and ended inside it, and ignore the click that may follow within 800 ms. Keyboard and mouse still go through `click`.
+- **Proof.** Control (n) puts back click-only and the Chromium sign-in test goes red again.
+- **Two things that are not the cause.** I first removed `preventDefault()` from the pad's pointer handlers; the probe showed it made no difference, and the removal stays because it isn't needed with `touch-action: none`.
+
+The first run also showed a page bug in WebKit: closing the sheet left the old grid showing until the refresh came back, so a tap could land on a card about to be replaced. `closeSheet` now draws the grid from the data in hand at once.
+
+### The lead's journey spec against this page
+
+`E2E_PORT=7805 npx playwright test tests/journey --project chromium-tablet` (run once, output not kept):
+- The door, room view, parent note, refused pick-up and the grandmother's sign-out all pass.
+- It stops at `journey.spec.mjs:123`, `keypad(desk, SUPERVISOR_PIN, …)` on `/office/`. That page is dd2's M3 and not built yet; nothing on the door side is wrong.
+- The run wrote `app/tests/journey/shots/`, which is the lead's path. I deleted it and did not commit it.
+
+### Housekeeping
+
+- Scratch output (probe specs, run logs, WebKit results) lived only in `app/tests/door/` and was deleted before the commit.
+- `m2-run.txt` has not come back.
+
+### Needs from the lead
+
+- **`app/package.json` is yours:** a script such as `"test:door:negative": "node tests/door/negative-all.mjs"` would make the door controls part of `rig qa`.
+- **`helpers.mjs` `drawSignature` (yours):** on Chromium it lifts with no pause, so the first tap after it is dropped unless the page handles `pointerup` as the door page now does. Any other page with a pad would need the same `onPress`, or the helper could hold still for ~100 ms before `touchEnd`. The door page is fine either way.
+
 ## Cross-review of dd2 M1 — DONE (read only, branch `rig/dd2` at 9370b07)
 
 Read: `api.js`, `room/room.js`, `room/session.js`, `room/note/staff-note.js`, `note/note.js`, `note/render.js`, `keypad.js`. Each call was checked against docs/API.md and against what my Worker actually answers.
@@ -18,7 +113,7 @@ Read: `api.js`, `room/room.js`, `room/session.js`, `room/note/staff-note.js`, `n
 Findings, none blocking. dd2 or the lead decide:
 1. **Stale nap button (low).** `room.js` `refreshSheet` works out nap state from the fresh `d.logs`, then overrides it with `today`, which can be up to 5 s old. If another phone logged a nap start in that window, the sheet offers "Nap start". Tapping it gets 409 `already_napping`, which is shown as a toast. Suggest trusting `d.logs`, or the API's `napping` after `refresh()`.
 2. **Undo shown on other people's logs (low, UX).** Every row in Today shows "Undo", but an educator can only void their own log: the Worker answers 403 "Only the person who logged it, or the supervisor, can undo it." The page handles it with a toast. It could hide Undo unless `log.by.id` is the signed-in staff member or the role is supervisor.
-3. **"What we did today" can miss a room (medium, contract question for the lead).** `staff-note.js` builds its room list from `note.activities` plus the child's current room. API.md now lists only rooms whose line is not empty, so a child moved out of a room whose line is still empty never gets that room's box on this page. No field in the API says which rooms a child was in today. Options: show every active room from `today.rooms`, or add `placed_room_ids` to the note or staff child view.
+3. **DONE (lead added `rooms_today` and `activities[].room_id`; built in M3a).** **"What we did today" can miss a room (medium, contract question for the lead).** `staff-note.js` builds its room list from `note.activities` plus the child's current room. API.md now lists only rooms whose line is not empty, so a child moved out of a room whose line is still empty never gets that room's box on this page. No field in the API says which rooms a child was in today. Options: show every active room from `today.rooms`, or add `placed_room_ids` to the note or staff child view.
 4. **Mock data in a real page (low, lead decides).** `room/api.mock.js` ships in `app/public`, and `?mock=1` is remembered for the tab. Anyone opening `/room/?mock=1` on a real phone sees made-up data that looks live. Suggest refusing mock mode off `127.0.0.1`/`localhost`, or not shipping it.
 5. **For dd2's M3.** `api.js` `call()` parses every answer as JSON. The CSV downloads are `text/csv`, so they need a real link (`<a href download>` with the token passed another way) or `fetch` + blob, not `call()`.
 6. **For information only.** The keypad refuses fewer than 4 digits with its own message before calling the API, so `#pin-error` shows "Enter your 4 to 6 digit PIN." rather than the API's text. The room spec's wrong-PIN test uses 4 digits, so it is unaffected.
@@ -96,19 +191,19 @@ The five M1 controls went red again in the same run.
 
 ### Choices made where API.md left room (lead: overrule any)
 
-1. **Present, missing, children in range.** `present` = the child has any part that date, even a 0-minute one. `missing` is literal: a booked date with no visit and no absence, **future dates included**. The office page may want to grey dates after `today`. Attendance lists every child registered on any date in the range, plus anyone with a part or absence in it, sorted by home room, then name.
+1. **DONE (lead: new status `upcoming` for booked dates after today; built in M3a).** **Present, missing, children in range.** `present` = the child has any part that date, even a 0-minute one. `missing` is literal: a booked date with no visit and no absence, **future dates included**. The office page may want to grey dates after `today`. Attendance lists every child registered on any date in the range, plus anyone with a part or absence in it, sorted by home room, then name.
 2. **CSV Room and notes.** `Room` is the home room. A part that is both continued and continues (a visit over 2 midnights) gets `Continued from the day before; Continues past midnight`.
 3. **Absences and sign-ins.** An absence is refused if a visit touches that date (an open visit counts only on its own date). Signing a child in after an absence was recorded is allowed: the day is `present` and the CSV still has the absence row. An unknown `child_id` on POST absences is 400 `field: "child_id"`, not 404, because it is a body field.
 4. **Fix a time.**
    - A missing date or time falls back to the stored value; for an open visit's out, the date falls back to the in date.
    - A time in the spring-forward gap is 400.
    - The new times must not overlap another visit of the child, nor cross a room move.
-   - Closing an open visit leaves `out_by` null, because nobody picked up on the record.
+   - Closing an open visit leaves `out_by` null, because nobody picked up on the record. **Accepted by the lead.**
    - `edits[].what` reads `"Out not signed out changed to 4:30 PM Mon Sep 14"` / `"In 9:00 AM Mon Sep 14 changed to 8:45 AM Mon Sep 14"`, and `at_label` is `"Mon Sep 14, 5:00 PM"`.
 5. **Register.** Rows are the children with a placement in that room that day, whatever their home room. Moves read from that room's side: `"Went to Toddler room 10:00 AM, back 10:40 AM"` for a child who left and came back, `"Came from Infant room 10:00 AM, left 10:40 AM"` for a visitor.
 6. **Rooms and staff.** Closing a room also ends staff presence in it, and making a staff member inactive ends theirs. PIN uniqueness is checked against every staff member, inactive ones included. The last-supervisor guard covers both a role change and going inactive. A staff member's role is read from the staff row on every request, so a role change applies at once.
 7. **Initials** use the first letter or digit of each of the first two words. `=SUM(A1) (SAMPLE)` gets `SS`; every SAMPLE name is unchanged.
-8. **Demo seed.** The SAMPLE centre has only 8 pre-schoolers, so Maya S. (2 years 9 months, in the pre-school range) is signed into the toddler room and moved to the preschool room at 8:30. That makes the preschool room 9, over, and leaves the toddler room at 4, ok.
+8. **DONE (lead: don't move Maya; built in M3a, see above).** **Demo seed.** The SAMPLE centre has only 8 pre-schoolers, so Maya S. (2 years 9 months, in the pre-school range) is signed into the toddler room and moved to the preschool room at 8:30. That makes the preschool room 9, over, and leaves the toddler room at 4, ok.
    - The visit never signed out is Finn's, 5 weekdays ago. Its placement ends, so it does not skew today's meters, but the door honestly shows Finn as in until a supervisor fixes it.
    - The waiting signature is Leo's, on the last weekday, recorded by Kevin.
    - Absences: Liam sick, Emma holiday, Sam appointment, Zoe family.
