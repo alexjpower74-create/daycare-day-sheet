@@ -1158,3 +1158,35 @@ not ok 1 - attendance: open visits are present with 0 minutes and Not signed out
     -       continues: false,
             in_label: '9:00 AM',
 RESULT: RED as intended (exit 1); red tests: attendance: open visits are present with 0 minutes and Not signed out, in the JSON, the CSV and the summary
+
+=== negative:followups — 2026-09-14T12:56:05.973Z
+break: reports.js followUps keeps only visits still open, so a signature owed for a child who went home disappears
+patched: src/reports.js
+run: node tests/run.mjs --fresh --api-only --grep ^follow-ups (PORT 7805)
+== api: fresh Worker on http://127.0.0.1:7805 (state .state-7805)
+# tests 2
+# pass 1
+# fail 1
+not ok 1 - follow-ups: a signature owed for a child who went home is listed, one 15 dates old is not, signing removes it; open visits from before today oldest first, not today's
+  ---
+  duration_ms: 421.316638
+  type: 'test'
+  location: 'worker/tests/api-m2.test.mjs:542:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Ava went home and still owes a signature; Nora on the 14th date is listed
+    + actual - expected
+    
+    + []
+    - [
+    -   {
+    -     child: {
+    -       id: 'c_ava',
+    -       name: 'Ava M. (SAMPLE)'
+    -     },
+    -     date: '2026-09-14',
+    -     date_label: 'Mon Sep 14',
+    -     person: {
+    -       id: 'p_ava_mother',
+    -       name: 'Sarah M. (SAMPLE)'
+RESULT: RED as intended (exit 1); red tests: follow-ups: a signature owed for a child who went home is listed, one 15 dates old is not, signing removes it; open visits from before today oldest first, not today's

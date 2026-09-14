@@ -169,7 +169,12 @@ export async function loadDay(c) {
   }
   ctx.status = (ch) => {
     const open = ctx.open.get(ch.id)
-    if (open) return { status: 'in', status_label: `In since ${timeLabel(open.in_at)}` }
+    if (open) {
+      // A visit opened on an earlier date and never signed out says so, with its date and time, rather than "In since".
+      const label = open.date === today ? `In since ${timeLabel(open.in_at)}`
+        : `Still signed in from ${dateLabel(open.date)}, ${timeLabel(open.in_at)}. Not signed out.`
+      return { status: 'in', status_label: label }
+    }
     const outs = visits.filter((v) => v.child_id === ch.id && v.out_at && v.out_at >= start && v.out_at < end).map((v) => v.out_at).sort()
     if (outs.length) return { status: 'gone_home', status_label: `Gone home at ${timeLabel(outs[outs.length - 1])}` }
     const away = ctx.absence.get(ch.id)

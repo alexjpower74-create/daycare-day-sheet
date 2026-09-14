@@ -17,6 +17,7 @@ slice's own tree. Pass/fail comes from each command's own exit code, echoed insi
 | dd2 M3 | `4f84a39` | the office (Today, Children, Rooms and ratios, Staff, Attendance with CSVs) + printable register; dd1 cross-review fixes (nap state, Undo on own logs) | web 102 / 0 / 2 skipped; web negative controls 6 of 6 red (+ attendance-day, ratio-reload) |
 | dd1 M3b | `bdbcaa9` | the door tablet (keypad setup, sign in/out with finger signature, not-on-the-list block, over banner, add a signature) | Worker unit 31 / 0 / 0, API 40 / 0 / 0, setup 1 / 0 / 0; door 24 / 0 / 0 (chromium + webkit tablet); door negative controls 4 of 4 red (pickup-list, over-banner, overlay, tap-after-stroke) |
 | journey | main `d4ff551` | a parent signs Ava in on the tablet → Marie logs lunch and a nap on a phone → the parent link shows them → the neighbour is not offered at pick-up and "Someone else" is blocked → the grandmother signs out → office attendance shows 7 h 30 min (API 450 min) → the link works at 11:59:59 PM and is dead after midnight | 2 / 0 / 0 (chromium-tablet, webkit-tablet), first run; negative control red: a room view that sends "some" for "Ate all" fails at the meal check |
+| dd1 M4 | `cfbc2aa` | `GET /api/office/follow-ups`; dated door label for a visit left open from an earlier day; two grid bugs the screenshots showed (stray "null", circle-shaped pills) | Worker unit 31 / 0 / 0, API 42 / 0 / 0, setup 1 / 0 / 0, Worker controls 11 of 11 red; door 26 / 0 / 0, door controls 6 of 6 red |
 
 ## Rules check
 

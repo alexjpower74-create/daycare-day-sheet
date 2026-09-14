@@ -12,7 +12,8 @@ const APP = path.resolve(HERE, '..', '..')
 const ROOT = path.resolve(APP, '..')
 const LOG = path.join(HERE, 'negative-control.log')
 
-// patches: [{ file (under app/public), from, to }]; grep: the test title to run; expect: strings that must all be in the output.
+// patches: [{ file (under app/public, or worker/… for the Worker copy), from, to }]; grep: the test title to run; expect: strings that
+// must all be in the output.
 export function doorNegative({ name, why, patches, grep, expect }) {
   const port = process.env.NEG_PORT || '7806'
   const base = path.join(APP, '.negative', `door-${name}`)
@@ -25,7 +26,7 @@ export function doorNegative({ name, why, patches, grep, expect }) {
   }
   cpSync(path.join(APP, 'public'), path.join(base, 'app', 'public'), { recursive: true })
   for (const p of patches) {
-    const file = path.join(base, 'app', 'public', p.file)
+    const file = p.file.startsWith('worker/') ? path.join(base, p.file) : path.join(base, 'app', 'public', p.file)
     const text = readFileSync(file, 'utf8')
     const count = text.split(p.from).length - 1
     if (count !== 1) {
@@ -46,7 +47,7 @@ export function doorNegative({ name, why, patches, grep, expect }) {
   const lines = out.split('\n').filter((l) => /✘|✓|passed|failed|Error:|Expected|Received|something else is on top|Locator:|expected to|unexpected value/.test(l))
     .slice(0, 30).join('\n')
   const result = red ? 'RESULT: RED as intended' : `RESULT: NOT RED — the check measured nothing (exit ${r.status}; missing: ${missing.join(' | ') || 'none'})`
-  appendFileSync(LOG, `${header}patched: ${patches.map((p) => `app/public/${p.file}`).join(', ')}\nrun: npx playwright test tests/door/door.spec.mjs --project chromium-tablet --grep "${grep}" (E2E_PORT ${port})\n${lines}\n${result}\n`)
+  appendFileSync(LOG, `${header}patched: ${patches.map((p) => (p.file.startsWith('worker/') ? p.file : `app/public/${p.file}`)).join(', ')}\nrun: npx playwright test tests/door/door.spec.mjs --project chromium-tablet --grep "${grep}" (E2E_PORT ${port})\n${lines}\n${result}\n`)
   rmSync(base, { recursive: true, force: true })
   console.log(`${lines}\n${result}`)
   return red ? 0 : 1

@@ -3,7 +3,7 @@ import { buildAttendance, movesLabels } from './attendance.js'
 import { ATTENDANCE_HEADER, csvText, SUMMARY_HEADER } from './csv.js'
 import { editsFor, visitView } from './db.js'
 import { bad, json } from './http.js'
-import { addDays, endOfDate, isValidDate, longLabel, startOfDate } from './time.js'
+import { addDays, dateLabel, endOfDate, isValidDate, localDate, longLabel, startOfDate, timeLabel } from './time.js'
 
 export const MAX_RANGE_DAYS = 92
 export const KEPT_NOTE = 'Daily registers are kept for at least 7 years (NLR 39/17 s.45(3)).'
@@ -93,5 +93,47 @@ export async function register(c) {
   return json({
     centre_name: centre[0].name, sample: centre[0].sample === 1, date, long_label: longLabel(date),
     room: { id: room.id, name: room.name }, rows, kept_note: KEPT_NOTE,
+  })
+}
+
+// The office's follow-ups. pending_signatures: staff-recorded times still owed a parent's signature, dated in the last 14 dates
+// (today included), newest first, whether or not the child is here now. not_signed_out: visits left open from before today,
+// oldest first (today's open visits are the children who are simply here).
+export async function followUps(c) {
+  const [pending, open, children, people, staff] = (await c.db.batch([
+    c.db.prepare(`SELECT * FROM visits WHERE date >= ? AND ((in_recorded_by IS NOT NULL AND in_signature IS NULL)
+      OR (out_at IS NOT NULL AND out_recorded_by IS NOT NULL AND out_signature IS NULL)) ORDER BY in_at, rowid`).bind(addDays(c.today, -13)),
+    c.db.prepare('SELECT * FROM visits WHERE out_at IS NULL AND date < ? ORDER BY in_at, rowid').bind(c.today),
+    c.db.prepare('SELECT id, name FROM children'),
+    c.db.prepare('SELECT id, name FROM people'),
+    c.db.prepare('SELECT id, initials FROM staff'),
+  ])).map((r) => r.results)
+  const childOf = byId(children)
+  const personOf = byId(people)
+  const staffOf = byId(staff)
+  const named = (map, id) => ({ id, name: map.get(id)?.name ?? '' })
+  // A signature owed on a visit that has ended is still owed.
+  const waiting = pending
+  const owed = waiting.flatMap((v) => ['in', 'out']
+    .filter((which) => (which === 'in' ? v.in_recorded_by && !v.in_signature : v.out_at && v.out_recorded_by && !v.out_signature))
+    .map((which) => {
+      const at = which === 'in' ? v.in_at : v.out_at
+      const by = which === 'in' ? v.in_recorded_by : v.out_recorded_by
+      return {
+        at,
+        item: {
+          visit_id: v.id, child: named(childOf, v.child_id), which, date: localDate(at), date_label: dateLabel(localDate(at)),
+          time_label: timeLabel(at), person: named(personOf, which === 'in' ? v.in_person_id : v.out_person_id),
+          recorded_by: { id: by, initials: staffOf.get(by)?.initials ?? '' },
+        },
+      }
+    }))
+  owed.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0))
+  return json({
+    pending_signatures: owed.map((o) => o.item),
+    not_signed_out: open.map((v) => ({
+      visit_id: v.id, child: named(childOf, v.child_id), date: v.date, date_label: dateLabel(v.date), in_label: timeLabel(v.in_at),
+      in_by: named(personOf, v.in_person_id),
+    })),
   })
 }
