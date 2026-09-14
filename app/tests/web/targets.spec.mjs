@@ -3,8 +3,8 @@
 // header or its toast.
 import { test, expect } from '@playwright/test'
 import {
-  fresh, assertNoThirdParty, tap, keypad, expectTapTarget, contrastOf, api, bearer, staffToken, doorToken, signInViaApi,
-  presenceViaApi, shot, EDUCATOR_PIN,
+  NOW, fresh, assertNoThirdParty, tap, keypad, expectTapTarget, contrastOf, api, bearer, staffToken, doorToken, signInViaApi,
+  presenceViaApi, shot, EDUCATOR_PIN, SUPERVISOR_PIN,
 } from '../helpers.mjs'
 
 const PAGES = ['/', '/room/', '/room/note/', '/note/', '/office/']
@@ -12,8 +12,24 @@ const PAGES = ['/', '/room/', '/room/note/', '/note/', '/office/']
 test.beforeEach(async ({ context, request }) => { await fresh(context, request) })
 test.afterEach(async ({ context }) => { assertNoThirdParty(context) })
 
+/** How far the page scrolls sideways; when it does, the result also names the elements that stick out (for the failure message). */
 async function sidewaysScroll(page) {
-  return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+  const { over, culprits } = await page.evaluate(() => {
+    const width = document.documentElement.clientWidth
+    const over = document.documentElement.scrollWidth - width
+    const name = (el) => `${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ''}${typeof el.className === 'string' && el.className.trim() ? `.${el.className.trim().split(/\s+/).join('.')}` : ''}`
+    // Page coordinates (a sweep's scrollIntoView can leave the page scrolled sideways, which shifts every viewport rect left).
+    const culprits = over <= 0 ? [] : [...document.querySelectorAll('body *')]
+      .map((el) => ({ el, right: el.getBoundingClientRect().right + window.scrollX }))
+      .filter(({ right }) => right > width + 1)
+      .sort((x, y) => y.right - x.right)
+      .slice(0, 8)
+      .map(({ el, right }) => `${name(el)} → ${Math.round(right)}px (in ${el.parentElement ? name(el.parentElement) : '-'})`)
+    culprits.unshift(`scrollX ${window.scrollX}`)
+    return { over, culprits }
+  })
+  if (over > 0) console.log(`sideways by ${over}px: ${culprits.join(' | ')}`)
+  return over
 }
 
 /** Every visible button and button-styled link in scope: centred in its scroller, then size + elementFromPoint. */
@@ -120,4 +136,62 @@ test('the open child sheet never has a control under its header or its toast', a
     await el.evaluate((e) => e.scrollIntoView({ block: 'start' }))
     await expectTapTarget(page, el, 44, `sheet control ${i} at the top of the sheet body`)
   }
+})
+
+const OFFICE_TABS = ['Today', 'Children', 'Rooms and ratios', 'Staff', 'Attendance']
+
+/** The demo day (every room busy, 15 weekdays of attendance, absences, a visit never signed out). */
+async function demoDay(request) {
+  const r = await api(request, 'POST', '/api/test/seed', { scenario: 'demo' })
+  expect(r.status, `demo seed: ${JSON.stringify(r.body)}`).toBe(200)
+  return r.body
+}
+
+test('the office: every tab, and every visible button on it and in its dialogs, is at least 44 px and hit-tests to itself', async ({ page, request }) => {
+  test.setTimeout(240_000)
+  await demoDay(request)
+  await page.goto('/office/')
+  await checkTargets(page, page.locator('main'), 'office keypad')
+  await keypad(page, SUPERVISOR_PIN, page.locator('#pin-enter'))
+  await expect(page.getByRole('tab')).toHaveCount(OFFICE_TABS.length)
+  expect(await sidewaysScroll(page), 'office scrolls sideways').toBeLessThanOrEqual(0)
+
+  for (const name of OFFICE_TABS) {
+    const tab = page.getByRole('tab', { name, exact: true })
+    await tap(page, tab, `tab ${name}`)
+    await expect(tab).toHaveAttribute('aria-selected', 'true')
+    await expect(page.locator('#office-panel .office-title')).toBeVisible()
+    if (name === 'Children') {
+      await tap(page, page.locator('[data-child-row="c_ava"]'), 'Ava in the children list')
+      await expect(page.locator('[data-person-row]').first()).toBeVisible()
+    }
+    await checkTargets(page, page.locator('body'), `office ${name}`)
+    for (const s of await page.locator('label.switch').all()) {
+      if (await s.isVisible()) await expectTapTarget(page, s, 44, `office ${name}: switch "${(await s.textContent()).trim()}"`)
+    }
+    expect(await sidewaysScroll(page), `office ${name} scrolls sideways`).toBeLessThanOrEqual(0)
+  }
+
+  // The attendance dialogs
+  await tap(page, page.locator('#mark-away'), 'Mark away')
+  await expect(page.locator('#away-dialog')).toBeVisible()
+  await checkTargets(page, page.locator('#away-dialog'), 'Mark away dialog')
+  await tap(page, page.locator('#away-dialog').getByRole('button', { name: 'Cancel' }), 'Cancel Mark away')
+  await expect(page.locator('#away-dialog')).toHaveCount(0)
+  await tap(page, page.locator('[data-cell] .fix-time').first(), 'a Fix a time button')
+  await expect(page.locator('#fix-dialog')).toBeVisible()
+  await checkTargets(page, page.locator('#fix-dialog'), 'Fix a time dialog')
+})
+
+test('the printable register at 1280: every visible button is at least 44 px and hit-tests to itself', async ({ page, request }, testInfo) => {
+  test.skip(!testInfo.project.name.endsWith('1280'), 'The register is a desk page: checked at 1280.')
+  const seeded = await demoDay(request)
+  await page.goto('/office/')
+  await keypad(page, SUPERVISOR_PIN, page.locator('#pin-enter'))
+  await expect(page.getByRole('tab', { name: 'Today', exact: true })).toBeVisible()
+  await page.goto(`/office/register/?date=${seeded.today}&room=r_infant`)
+  await expect(page.locator('#register-table')).toBeVisible()
+  const checked = await checkTargets(page, page.locator('body'), 'register')
+  expect(checked, 'Office and Print').toBe(2)
+  expect(await sidewaysScroll(page), 'register scrolls sideways').toBeLessThanOrEqual(0)
 })

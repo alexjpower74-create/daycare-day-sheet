@@ -377,8 +377,18 @@ async function resetRatio(g) {
   toast('Back to the cited number.', { slot: $(`#ratio-status-${g}`) })
 }
 
+// Options carry the short group name; the full cited label shows under the picker. Long option text made WebKit widen the whole page
+// on a phone (a <select> is laid out as wide as its longest option there), and a truncated label could not be read anyway.
+const shortGroup = (label) => label.split(' (')[0]
 function ageGroupSelect(id, rules, value) {
-  return h('select', { id, name: 'age_group' }, rules.map((rule) => h('option', { value: rule.age_group, selected: rule.age_group === value }, rule.label)))
+  const hint = h('p', { class: 'faint small age-hint', id: `${id}-hint` })
+  const select = h('select', { id, name: 'age_group', 'aria-describedby': hint.id },
+    rules.map((rule) => h('option', { value: rule.age_group, selected: rule.age_group === value }, shortGroup(rule.label))))
+  const show = () => { const rule = rules.find((r) => r.age_group === select.value); hint.textContent = rule ? `${rule.label}. ${rule.citation}.` : '' }
+  select.addEventListener('change', show)
+  show()
+  select.hint = hint
+  return select
 }
 
 function roomsSection(rooms, rules) {
@@ -395,7 +405,7 @@ function roomForm(room, rules) {
   const form = h('form', { class: 'panel room-form', 'data-room-form': key, novalidate: true },
     h('h3', {}, isNew ? 'Add a room' : room.name),
     field('Name', input(`room-${key}-name`, 'name', 'text', room?.name, { autocomplete: 'off' })),
-    field('Age group', ageGroupSelect(`room-${key}-age_group`, rules, room?.age_group || 'preschool'), isNew ? MIXED_AGES : null),
+    (() => { const select = ageGroupSelect(`room-${key}-age_group`, rules, room?.age_group || 'preschool'); return [field('Age group', select, isNew ? MIXED_AGES : null), select.hint] })(),
     field('Order on the screens', input(`room-${key}-sort`, 'sort', 'number', room?.sort ?? 10, { inputmode: 'numeric', min: '0', step: '1' })),
     isNew ? null : switchInput(`room-${key}-active`, 'active', 'Open', room.active),
     h('div', { class: 'btn-row' }, h('button', { type: 'submit', class: 'btn btn-primary' }, isNew ? 'Add room' : 'Save room')),
