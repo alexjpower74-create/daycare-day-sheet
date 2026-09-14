@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>SAMPLE Little Harbour Child Care (demo) · Daycare Day Sheet</title>
+  <title>Daycare Day Sheet</title>
   <link rel="stylesheet" href="/theme.css">
   <link rel="stylesheet" href="/style.css">
 </head>
@@ -12,7 +12,7 @@
   <main class="start-main">
     <header class="start-head">
       <p class="eyebrow">Daycare Day Sheet</p>
-      <h1 class="centre"><span class="centre-name" id="centre-name">SAMPLE Little Harbour Child Care (demo)</span> <span class="sample-badge">SAMPLE</span></h1>
+      <h1 class="centre"><span class="centre-name" id="centre-name"></span> <span class="sample-badge" hidden>SAMPLE</span></h1>
       <p class="muted" id="today-line"></p>
     </header>
     <nav class="start-cards" aria-label="Open a screen">
@@ -33,8 +33,9 @@
   </main>
   <script type="module">
     import { api } from '/api.js'
+    import { applyCentre } from '/ui.js'
     api.info().then((i) => {
-      if (i.centre_name) document.getElementById('centre-name').textContent = i.centre_name
+      applyCentre(i)
       document.getElementById('today-line').textContent = i.long_label
     }).catch(() => {})
   </script>
