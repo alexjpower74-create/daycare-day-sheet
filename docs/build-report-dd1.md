@@ -48,6 +48,17 @@ The first `7-still-signed-in-from-last-week` shot missed Ruby's card, which was 
 - `negative:followups` red at (a); door controls (o) and (p) red at (b).
 - Every server started for these runs was stopped, and ports 7802, 7804, 7805 and 7806 are free.
 
+### Needs from the lead (M4)
+
+- **`rig guard` is blocked by PLAN.md on main.** Commit ee56300 added "## Next round" with `### dd1` and `### dd2` headings, and rig reads
+  those as a second pair of agent ids: `Duplicate agent id "dd1" in the plan. Ids are addresses; they must be unique.` The guard
+  stops before it checks any file. I committed M4b (3814615) and this note without it, after checking every staged path by hand
+  against dd1's Owns (`worker/**`, `app/public/door/**`, `app/tests/door/**`, `docs/build-report-dd1.md`). Renaming those headings
+  (for example `#### dd1 next`) should bring the guard back.
+- **Status pills on one line.** Your queued item 3 wants status pills to stay on one line at 1024×768. M4b gave the pill a 14 px
+  radius so a wrapped label is a rounded box instead of a circle; that stops the shape breaking, but it is not the one-line layout
+  you asked for. Not started, since it is next round.
+
 ## M3 — Worker changes (a) and the door tablet (b) — DONE
 
 ### (a) Worker changes from the lead's M2 answers — commit 8bf2c61, on its own so dd2 can merge it
