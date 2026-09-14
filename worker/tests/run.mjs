@@ -105,6 +105,8 @@ if (!flag('--unit-only')) {
       process.exit(1)
     }
   }
+  // A freshly migrated D1 has no centre row: checked first, before any test resets it, and only on a Worker this run started.
+  if (!reused) failed |= runNodeTests(['tests/api-empty.test.mjs'], grep ? [`--test-name-pattern=${grep}`] : [], { API_BASE: BASE })
   const files = ['tests/api.test.mjs', 'tests/api-m2.test.mjs'].filter((f) => existsSync(path.join(WORKER, f)))
   failed |= runNodeTests(files, grep ? [`--test-name-pattern=${grep}`] : [], { API_BASE: BASE, STATE_DIR: STATE })
   if (dev) {

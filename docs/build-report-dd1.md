@@ -2,6 +2,66 @@
 
 A record, not a queue. Newest milestone at the top.
 
+## Cross-review of dd2 office — DONE (read only; main at the merge before this commit)
+
+Read: `app/public/office/office.js`, `office/attendance.js`, `office/dates.js`, `office/register/register.js` and `app/public/api.js`, against docs/API.md and the Worker. A subagent did the first read. I re-read every cited line before writing it here. Line numbers are as of that merge.
+
+**No mismatched route, method or body type.** The trouble is in how the pages read the answers and which data they fetch.
+
+1. **Attendance ignores `still_here` (wrong display, and offers a forbidden action).**
+   - Where: `office/attendance.js:67-73`, `if (day.open) { … 'Not signed out' … 'Fix a time' }`. Line 67 also shows the minutes button on an open day.
+   - Expected: API.md says an open visit dated today is `still_here: true`, with no flag and no "Fix a time"; `open && !still_here` is Not signed out.
+   - Got: every child still here today reads "Not signed out" and gets Fix a time.
+   - Test that fails: sign a child in at the pinned time, open Attendance on today, and expect `[data-cell="c_ava:2026-09-14"]` to contain neither "Not signed out" nor `.fix-time`.
+2. **The register says "Not signed out" on today's register (wrong display).**
+   - Where: `office/register/register.js:84`, `if (!at) return which === 'out' ? … 'Not signed out' : null`.
+   - Expected: API.md says "Still here" on today's register, "Not signed out" on an earlier date's.
+   - Test that fails: sign a child in, open today's infant register, and expect the out column to read "Still here".
+3. **The Today tab never uses `GET /api/office/follow-ups` (follow-ups go missing).** Nothing in `app/public` calls the route.
+   - `office.js:159` builds "Signature needed" only from children in a room right now (`today.rooms[].children[].awaiting_signature`). A pick-up staff recorded without a signature, or a child who has gone home, never shows.
+   - `office.js:157` builds "Not signed out" from a 14-date attendance window. A visit left open longer ago disappears, although `not_signed_out` has no date limit.
+   - Test that fails: record a pick-up as staff with no signature, then expect Today's "Signature needed" to name the child.
+   - Also, `office.js:184` prints the raw `date` ("2026-09-10") instead of `date_label`.
+4. **Editing a child whose home room is closed failed.**
+   - Where: `office.js:231` keeps the closed room in the select, and `office.js:251` always sends `home_room_id`.
+   - Got: the Worker refused any closed room with 400 on `home_room_id` ("Pick a room that is open."), so even a name change could not be saved.
+   - **Fixed on the Worker side.** `worker/src/office.js` `parseChild` now accepts the child's own, unchanged home room even when it is closed. Moving a child into a closed room is still refused.
+   - Test: `children: an edit that sends back the home room of a closed room is saved; …` (200 for the unchanged room, 400 for Ava into it).
+   - **Control `negative:homeroom`** (the copy never keeps the unchanged room) went red: `400 !== 200`. The page needs no change.
+5. **Fix a time pre-fills the wrong sign-in date on an overnight visit's second day (breaks, in that case).**
+   - Where: `office/attendance.js:114` fills `in_date` with the cell's date, and `:131` sends it as soon as a time is typed.
+   - Got: from the Sep 15 "Continued from the day before" cell, a new in time is sent as Sep 15. The Worker then refuses on `out_time` ("The time out must be after the time in."). Changing only a date, with no time, is never sent.
+   - Expected: the visit's own dates (the part's `in_label` / `out_label` say which date).
+   - Test that fails: take a visit from 10:30 PM Sep 14 to 1:15 AM Sep 15, fix the in time to 22:00 from the Sep 15 cell, and expect 200 with `in_at` on Sep 14.
+6. **A mistaken absence can't be removed (feature missing).** `api.js:128` `removeAbsence` is never called, and the away chip (`attendance.js:76`) has no Remove.
+   - Test that fails: mark a child away, then look for a Remove control in that cell.
+7. **A failed `/api/info` leaves Attendance on "Loading…" (minor).** `office.js:32-37` swallows the failure, so `today` is undefined. `attendance.js:12` sets `state.anchor ??= today`, and `dates.js:9` then throws on `ymd.split`.
+   - Test that fails: route `/api/info` to a 500 in Playwright, open Attendance, and expect an error message.
+
+**Checked and correct:**
+- every office path and method in `api.js`;
+- child, person, room and staff bodies and types, with booleans as booleans, `sort` as a number, and `pin` as a string left out when blank;
+- ratios sending `null` or JSON numbers, with reset as a POST;
+- every `field` landing under a named input or a `data-field` element (children's `days`, ratios);
+- `pin_taken` under the pin input, and `bad_state` in the status line;
+- the absence body and reasons;
+- the fix-a-time field names and "HH:MM";
+- CSV downloads fetched with the Bearer token and saved from a blob, with the file name from `Content-Disposition`;
+- `upcoming` and `not_booked` shown as empty cells, and `missing` offering Mark away;
+- dates computed from the API's `today`, never the browser clock;
+- register field names;
+- 401 and 403 handling.
+
+**Verified:** `npm test` exit 0 (unit 32, empty-D1 1, API 44, setup 1).
+
+## Next round item 4 — `sample: false` before the centre row exists — DONE
+
+- **Change (`index.js`).** With no centre row, `/api/info` now answers `sample: false` (with `centre_name` and `phone` still `""`), so a real deployment shows no SAMPLE badge before first setup.
+- **Empty-D1 test.** `tests/api-empty.test.mjs` runs first, on the migrated D1 the run just started, before any reset or first setup. It checks `centre_name` `""`, `phone` `""`, `sample` false, then that `POST /api/test/reset` gives the SAMPLE centre with `sample: true`. `tests/run.mjs` runs it only on a Worker it started, never on a reused one.
+- **After first setup.** The setup stage still asserts `sample: false`.
+- **Control `negative:info-sample`.** The copy answers `true` with no centre row. It went red: `+ true` / `- false`.
+- **Verified.** `npm test` exit 0: unit 32, empty-D1 1, API 43, setup 1.
+
 ## Next round — Still here (item 2) and door pills (item 3) — DONE
 
 ### The M4 commits, guard-checked after the fact (lead's request)

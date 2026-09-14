@@ -347,6 +347,12 @@ writes README / DEPLOY / build report, pushes the private repo, closes the slice
 3. **Still here** display: attendance cells for today's open visits show "Still here" with no flag and no "Fix a time"; the register
    reads "Still here" for today and "Not signed out" for an earlier date.
 4. Office tap-size sweep and the empty centre name (already prompted).
+5. **Fix a time on an overnight visit** (dd1's cross-review, `office/attendance.js:114`/`:131`): the dialog pre-fills `in_date` with the
+   cell's date, so from the Sep 15 "Continued from the day before" cell a new in time is sent as Sep 15 and refused. Pre-fill and send
+   the visit's own dates. Spec: 10:30 PM Sep 14 → 1:15 AM Sep 15, fix the in time to 22:00 from the Sep 15 cell → 200, `in_at` on Sep 14;
+   make it red once in a copy.
+6. **Remove a mistaken absence**: the away chip gets a "Remove" (`DELETE /api/office/absences/:id`, already in `api.js`). Spec.
+7. **A failed `/api/info` must not leave Attendance on "Loading…"**: show the error in the status line. Spec routes `/api/info` to 500.
 
 ## Open questions
 None blocking. Anything that needs Alexander goes under NEEDS ALEXANDER in the status file.
