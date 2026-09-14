@@ -29,7 +29,8 @@ JSON in, JSON out. Errors are always
 
 - The centre's zone is `America/St_Johns` (Newfoundland time, DST on the second Sunday of March and the first Sunday of
   November at 2:00 AM). Every `date` is centre-local `YYYY-MM-DD`. Labels: `date_label` `"Mon Sep 14"`, `long_label`
-  `"Monday, September 14"`, `time_label` `"8:05 AM"`. Instants in JSON are ISO strings in UTC (`"2026-09-14T11:35:00.000Z"`).
+  `"Monday, September 14"`, `time_label` `"8:05 AM"`. Every `*_label` for a time (`in_label`, `out_label`, `since_label`, `time_label`)
+  is the bare time (`"8:05 AM"`); pages add words such as "In since". Instants in JSON are ISO strings in UTC (`"2026-09-14T11:35:00.000Z"`).
 - Pages never use the browser clock for dates or times. They take `today`, `now` and `now_local` (`"09:00"`) from the API.
 - Timestamps are stored to the second. **Minutes** of any span = `floor(end_ms / 60000) − floor(start_ms / 60000)`, so the
   parts of a span always add up to the whole span.
@@ -178,7 +179,7 @@ the pages show red at once.
   "infant_record": true,
   "updated_label": "Updated 2:07 PM" }
 ```
-Lists are oldest first; voided logs are left out. `activities` are the rooms the child was placed in that day. `infant_record` is true
+Lists are oldest first; voided logs are left out. `activities` are the rooms the child was placed in that day whose line is not empty. `infant_record` is true
 for the `infant` group (the page then titles it "Daily record of sleeping, eating and toileting", NLR 39/17 s.26(3)).
 
 ## Parent link (public)
