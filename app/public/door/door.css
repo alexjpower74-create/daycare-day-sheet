@@ -66,9 +66,12 @@ body.door { min-height: 100vh; background: var(--ground); }
 [data-status="not_booked"] { --s: var(--status-not-booked); }
 /* A 14 px radius reads as a pill on one line and stays a rounded box when a long label wraps. */
 .status-pill {
-  display: inline-flex; max-width: 100%; padding: 3px 12px; border-radius: 14px; font-size: 15px; font-weight: 600;
+  display: inline-flex; max-width: 100%; padding: 3px 10px; border-radius: 14px; font-size: 14px; line-height: 1.35; font-weight: 600;
   color: var(--text); background: color-mix(in srgb, var(--s) var(--tint), transparent); border: 1px solid var(--s);
 }
+/* On a card the status and the chip sit under the avatar across the full width: at 1024×768 the text column beside the avatar
+   is about 120 px, too narrow for "Gone home at 12:45 PM" on one line. */
+.child > .status-pill, .child > .chip-sign { grid-column: 1 / -1; justify-self: start; }
 .chip-sign {
   display: inline-flex; padding: 3px 10px; border-radius: 999px; font-size: 14px; font-weight: 700;
   color: var(--on-limit); background: var(--needs-signature);

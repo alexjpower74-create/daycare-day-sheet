@@ -3,7 +3,7 @@
 import { expect, test } from '@playwright/test'
 import {
   api, assertNoThirdParty, at, bearer, CENTRE, doorToken, drawSignature, EDUCATOR_PIN, fresh, keypad, presenceViaApi, shot,
-  signInViaApi, staffToken, STATE_RGB, stateColour, SUPERVISOR_PIN, supervisorToken, tap,
+  signInViaApi, signOutViaApi, staffToken, STATE_RGB, stateColour, SUPERVISOR_PIN, supervisorToken, tap,
 } from '../helpers.mjs'
 
 const card = (page, id) => page.locator(`button.child[data-child="${id}"]`)
@@ -283,6 +283,42 @@ test('a visit left open from last week: the card says Still signed in from Tue S
   await tap(page, ruby, 'Ruby card')
   await expect(page.locator('#sheet .status-line')).toHaveText('Still signed in from Tue Sep 8, 8:05 AM. Not signed out.')
   await expect(page.locator('#action-out'), 'the child can still be signed out').toBeVisible()
+})
+
+test('status pills: short labels stay on one line at 1024×768; the long Still signed in label wraps inside its box', async ({ page, context, request }, testInfo) => {
+  await fresh(context, request)
+  const door = await doorToken(request)
+  const t1245 = at('2026-09-14T12:45:00-02:30')
+  await signInViaApi(request, door, 'c_ava', 'p_ava_mother', { now: t1245 })
+  await signInViaApi(request, door, 'c_liam', 'p_liam_mother', { now: at('2026-09-14T08:15:00-02:30') })
+  await signOutViaApi(request, door, 'c_liam', 'p_liam_father', { now: t1245 })
+  await signInViaApi(request, door, 'c_ruby', 'p_ruby_mother', { now: at('2026-09-08T08:05:00-02:30') })
+  await setUpTablet(page)
+  expect(page.viewportSize()).toEqual({ width: 1024, height: 768 })
+  const pill = (id) => card(page, id).locator('.status-pill')
+  // Read-only measures: hidden overflow, lines of text inside the padding and border, and the pill's right edge inside its card.
+  const measure = (id) => pill(id).evaluate((el) => {
+    const cs = getComputedStyle(el)
+    const inner = el.getBoundingClientRect().height - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)
+      - parseFloat(cs.borderTopWidth) - parseFloat(cs.borderBottomWidth)
+    return {
+      overflow: el.scrollWidth - el.clientWidth,
+      lines: Math.round(inner / parseFloat(cs.lineHeight)),
+      inCard: el.getBoundingClientRect().right <= el.closest('button.child').getBoundingClientRect().right + 0.5,
+    }
+  })
+  for (const [id, text] of [['c_ava', 'In since 12:45 PM'], ['c_liam', 'Gone home at 12:45 PM'], ['c_nora', 'Not in yet'], ['c_isla', 'Not booked today']]) {
+    await expect(pill(id)).toHaveText(text)
+    const m = await measure(id)
+    expect(m.overflow, `${text}: nothing hidden`).toBeLessThanOrEqual(0)
+    expect(m.lines, `${text} stays on one line`).toBe(1)
+    expect(m.inCard, `${text}: inside its card`).toBe(true)
+  }
+  await expect(pill('c_ruby')).toHaveText('Still signed in from Tue Sep 8, 8:05 AM. Not signed out.')
+  const long = await measure('c_ruby')
+  expect(long.overflow, 'the long label: nothing hidden').toBeLessThanOrEqual(0)
+  expect(long.inCard, 'the long label wraps inside its card').toBe(true)
+  await shot(page, testInfo, 'door', '8-status-pills')
 })
 
 test('a device token that stops working brings back Set up this tablet', async ({ page, context, request }) => {
