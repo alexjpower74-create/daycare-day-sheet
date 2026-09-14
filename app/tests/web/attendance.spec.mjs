@@ -28,6 +28,8 @@ async function setUp(request) {
   await signOutViaApi(request, door, 'c_ava', 'p_ava_gran', { now: at('2026-09-15T01:15:00-02:30') })
   // Never signed out: Nora from 9:00 AM Tuesday.
   const nora = await signInViaApi(request, door, 'c_nora', 'p_nora_mother', { now: at('2026-09-15T09:00:00-02:30') })
+  // Still here: Emma in at 8:30 AM today (Wednesday), not signed out yet.
+  await signInViaApi(request, door, 'c_emma', 'p_emma_mother', { now: at('2026-09-16T08:30:00-02:30') })
   // An absence: Jack on holiday Tuesday.
   const office = await tokenAt(request, PAGE_NOW)
   const absence = await api(request, 'POST', '/api/office/absences', { child_id: 'c_jack', date: '2026-09-15', reason: 'holiday', note: '' }, bearer(office), { now: PAGE_NOW })
@@ -124,4 +126,23 @@ test('Download CSV and Download summary CSV save exactly what the API sends', as
     expect(saved.length, `${name} size`).toBeGreaterThan(40)
     expect(Buffer.compare(saved, fromApi), `${name} byte for byte`).toBe(0)
   }
+})
+
+test('today\'s open visit reads Still here with no flag and no Fix a time; an earlier open visit still reads Not signed out', async ({ page, request }) => {
+  const { office } = await setUp(request)
+  const data = (await api(request, 'GET', `/api/office/attendance?from=${FROM}&to=${TO}`, undefined, bearer(office), { now: PAGE_NOW })).body
+  const emma = data.children.find((c) => c.id === 'c_emma').days['2026-09-16']
+  const nora = data.children.find((c) => c.id === 'c_nora').days['2026-09-15']
+  expect([emma.status, emma.open, emma.still_here], 'API: Emma today').toEqual(['present', true, true])
+  expect([nora.status, nora.open, nora.still_here], 'API: Nora yesterday').toEqual(['present', true, false])
+
+  await openAttendance(page)
+  const today = cell(page, 'c_emma', '2026-09-16')
+  await expect(today, 'today\'s open visit reads Still here').toHaveText('Still here')
+  await expect(today.locator('.fix-time'), 'no Fix a time on today\'s open visit').toHaveCount(0)
+  await expect(today).not.toContainText('Not signed out')
+  const earlier = cell(page, 'c_nora', '2026-09-15')
+  await expect(earlier).toContainText('Not signed out')
+  await expect(earlier.getByRole('button', { name: /Fix a time/ })).toHaveCount(1)
+  await expect(earlier).not.toContainText('Still here')
 })

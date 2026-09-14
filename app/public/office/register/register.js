@@ -35,8 +35,9 @@ async function load() {
   if (staffSession.role() !== 'supervisor') return showProblem('Only the supervisor can open the office.')
   if (!roomId) return showProblem('Open the register from the office Today tab, where each room has "Print the daily register".')
   try {
-    if (!date) date = (await api.info()).today
-    build(await api.register(date, roomId))
+    const info = await api.info()
+    if (!date) date = info.today
+    build(await api.register(date, roomId), info.today)
   } catch (e) {
     if (e.status === 401) return signIn('Please sign in again.')
     showProblem(e.message)
@@ -80,9 +81,10 @@ function notes(v) {
   return out
 }
 
-function end(v, which) {
+// API.md: a visit with no out_at reads "Still here" on today's register and "Not signed out" on an earlier date's.
+function end(v, which, isToday) {
   const at = v[`${which}_label`]
-  if (!at) return which === 'out' ? h('span', { class: 'muted' }, 'Not signed out') : null
+  if (!at) return which === 'out' ? h('span', { class: isToday ? 'still-here' : 'muted' }, isToday ? 'Still here' : 'Not signed out') : null
   const by = v[`${which}_by`]
   return h('div', { class: 'register-end' },
     h('strong', {}, at),
@@ -90,7 +92,8 @@ function end(v, which) {
     signature(v[`${which}_signature_svg`], `Signature of ${by?.name || 'the parent'}`) || (v[`${which}_recorded_by`] ? h('span', { class: 'muted small block' }, 'No signature yet') : null))
 }
 
-function build(reg) {
+function build(reg, today) {
+  const isToday = reg.date === today
   document.title = reg.centre_name ? `Daily register · ${reg.room.name} · ${reg.centre_name}` : `Daily register · ${reg.room.name}`
   const rows = reg.rows.flatMap((row) => {
     const visits = row.visits.length ? row.visits : [null]
@@ -103,7 +106,7 @@ function build(reg) {
           : h('span', { class: 'muted' }, 'None on file')),
       ] : null,
       h('td', { class: 'register-in' }, v ? end(v, 'in') : h('span', { class: 'muted' }, 'Placed here, signed in elsewhere')),
-      h('td', { class: 'register-out' }, v ? end(v, 'out') : null),
+      h('td', { class: 'register-out' }, v ? end(v, 'out', isToday) : null),
       i === 0 ? h('td', { rowspan: String(visits.length), class: 'register-moves' }, row.moves.map((m) => h('span', { class: 'block' }, m.label))) : null,
       h('td', { class: 'register-notes' }, notes(v).map((n) => h('span', { class: 'block' }, n)))))
   })

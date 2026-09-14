@@ -34,7 +34,7 @@ export async function showAttendance({ today, state, attempt, refresh }) {
       h('button', { type: 'button', id: 'download-summary', class: 'btn btn-outline', onclick: (e) => download(`/api/office/attendance-summary.csv?from=${from}&to=${to}`, e.currentTarget, ctx) }, 'Download summary CSV')),
     statusLine,
     h('div', { class: 'table-scroll', tabindex: '0', role: 'region', 'aria-label': 'Attendance table' }, table(ctx)),
-    h('p', { class: 'faint small' }, 'A visit that crosses midnight counts on each side of it. A visit never signed out counts as present with 0 minutes until its time is fixed. Empty cells are days the child is not booked, or days still to come.'),
+    h('p', { class: 'faint small' }, 'A visit that crosses midnight counts on each side of it. A child signed in today and not signed out yet is Still here. A visit from an earlier day never signed out counts as present with 0 minutes until its time is fixed. Empty cells are days the child is not booked, or days still to come.'),
   ]
 }
 
@@ -67,7 +67,10 @@ function cell(ctx, child, date, day) {
     if (!day.open || day.minutes > 0) {
       nodes.push(h('button', { type: 'button', class: 'cell-btn fix-time', 'aria-label': `${minutesLabel(day.minutes)}. Fix a time for ${when}`, onclick: () => openFix(ctx, child, date, day) }, minutesLabel(day.minutes)))
     }
-    if (day.open) {
+    if (day.still_here) {
+      // API.md: an open visit dated today is simply still here: no flag and no Fix a time.
+      nodes.push(h('span', { class: 'chip chip-here' }, 'Still here'))
+    } else if (day.open) {
       nodes.push(h('span', { class: 'chip chip-sign' }, 'Not signed out'),
         h('button', { type: 'button', class: 'btn btn-quiet fix-time', 'aria-label': `Fix a time for ${when}`, onclick: () => openFix(ctx, child, date, day) }, 'Fix a time'))
     }

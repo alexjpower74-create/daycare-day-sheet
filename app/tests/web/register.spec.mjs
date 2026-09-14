@@ -113,3 +113,23 @@ test('an educator on this device sees the supervisor-only message on the registe
   await expect(page.locator('#register-error')).toHaveAttribute('role', 'alert')
   expect(dialogs).toEqual([])
 })
+
+test('a visit with no sign-out reads Still here on today\'s register and Not signed out on an earlier date\'s', async ({ page, request }) => {
+  const door = (await api(request, 'POST', '/api/door/unlock', { pin: SUPERVISOR_PIN }, { 'X-Test-IP': 'reg-still-door' }, { now: at('2026-09-11T07:00:00-02:30') })).body.token
+  // Fri Sep 11: Owen in at 8:00 AM, never signed out.
+  await signInViaApi(request, door, 'c_owen', 'p_owen_mother', { now: at('2026-09-11T08:00:00-02:30') })
+  // Today (Mon Sep 14): Liam in at 8:10 AM, still in at 5:00 PM.
+  await signInViaApi(request, door, 'c_liam', 'p_liam_mother', { now: t('08:10') })
+  const dana = await tokenAt(request, SUPERVISOR_PIN, PAGE_NOW)
+  const today = (await api(request, 'GET', '/api/office/register?date=2026-09-14&room_id=r_infant', undefined, bearer(dana), { now: PAGE_NOW })).body
+  const earlier = (await api(request, 'GET', '/api/office/register?date=2026-09-11&room_id=r_infant', undefined, bearer(dana), { now: PAGE_NOW })).body
+  expect(today.rows.find((r) => r.child.name === 'Liam K. (SAMPLE)').visits[0].out_at).toBeNull()
+  expect(earlier.rows.find((r) => r.child.name === 'Owen P. (SAMPLE)').visits[0].out_at).toBeNull()
+
+  await supervisorOnThisDevice(page)
+  await page.goto('/office/register/?date=2026-09-14&room=r_infant')
+  await expect(page.locator('tr[data-register-row="Liam K. (SAMPLE)"] .register-out'), 'today: open visit reads Still here').toHaveText('Still here')
+  await page.goto('/office/register/?date=2026-09-11&room=r_infant')
+  await expect(page.locator('h1')).toHaveText('Daily register: Infant room')
+  await expect(page.locator('tr[data-register-row="Owen P. (SAMPLE)"] .register-out'), 'an earlier date: open visit reads Not signed out').toHaveText('Not signed out')
+})

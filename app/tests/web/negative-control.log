@@ -299,3 +299,55 @@ Running 1 test using 1 worker
   1 failed
     [chromium-390] › tests/web/office.spec.mjs:82:1 › Rooms and ratios: an edit to 1:4 turns the room view at the limit, clearing it shows Not set, and the cited number comes back
 ----- verdict: RED as intended
+
+===== (g) still-here: today's open visit flagged Not signed out
+      2026-09-14T13:23:01.549Z · break in the copy's app/public/office/attendance.js · attendance.spec.mjs --grep "reads Still here with no flag" --project chromium-390
+
+Running 1 test using 1 worker
+
+[1/1] [chromium-390] › tests/web/attendance.spec.mjs:131:1 › today's open visit reads Still here with no flag and no Fix a time; an earlier open visit still reads Not signed out
+  1) [chromium-390] › tests/web/attendance.spec.mjs:131:1 › today's open visit reads Still here with no flag and no Fix a time; an earlier open visit still reads Not signed out 
+
+    Error: today's open visit reads Still here
+
+    expect(locator).toHaveText(expected) failed
+
+    Locator:  locator('[data-cell="c_emma:2026-09-16"]')
+    Expected: "Still here"
+    Received: "Not signed outFix a time"
+    Timeout:  8000ms
+
+    Call log:
+      - today's open visit reads Still here locator('[data-cell="c_emma:2026-09-16"]') with timeout 8000ms
+      - waiting for locator('[data-cell="c_emma:2026-09-16"]')
+        20 × locator resolved to <td data-cell="c_emma:2026-09-16" class="att-cell status-present">…</td>
+           - unexpected value "Not signed outFix a time"
+
+
+      139 |   await openAttendance(page)
+      140 |   const today = cell(page, 'c_emma', '2026-09-16')
+    > 141 |   await expect(today, 'today\'s open visit reads Still here').toHaveText('Still here')
+          |                                                               ^
+      142 |   await expect(today.locator('.fix-time'), 'no Fix a time on today\'s open visit').toHaveCount(0)
+      143 |   await expect(today).not.toContainText('Not signed out')
+      144 |   const earlier = cell(page, 'c_nora', '2026-09-15')
+        at <repo>/app/tests/web/attendance.spec.mjs:141:63
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    tests/results/web-attendance-today-s-ope-99259--still-reads-Not-signed-out-chromium-390/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: tests/results/web-attendance-today-s-ope-99259--still-reads-Not-signed-out-chromium-390/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    tests/results/web-attendance-today-s-ope-99259--still-reads-Not-signed-out-chromium-390/trace.zip
+    Usage:
+
+        npx playwright show-trace tests/results/web-attendance-today-s-ope-99259--still-reads-Not-signed-out-chromium-390/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+  1 failed
+    [chromium-390] › tests/web/attendance.spec.mjs:131:1 › today's open visit reads Still here with no flag and no Fix a time; an earlier open visit still reads Not signed out
+----- verdict: RED as intended
