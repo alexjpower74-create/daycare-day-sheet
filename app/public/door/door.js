@@ -46,7 +46,8 @@ async function refresh() {
 function drawHeader() {
   if (!info) return
   $('centre-name').textContent = info.centre_name
-  $('sample-badge').hidden = info.sample === false
+  $('sample-badge').hidden = info.sample !== true
+  document.title = info.centre_name ? `Door tablet · ${info.centre_name}` : 'Door tablet'
   $('date-line').textContent = info.long_label
   $('time-line').textContent = info.time_label
 }
@@ -171,7 +172,7 @@ function openSheet(detail) {
         h('div', {}, h('p', { class: 'sheet-name' }, c.name), h('p', { class: 'sheet-room' }, c.room_name || ''))),
       h('p', { class: 'sheet-centre' },
         h('span', { class: 'centre-name' }, info?.centre_name || ''),
-        info?.sample === false ? null : h('span', { class: 'sample-badge' }, 'SAMPLE'))),
+        info?.sample === true ? h('span', { class: 'sample-badge' }, 'SAMPLE') : null)),
     body)
   const bump = () => {
     if (!sheet) return

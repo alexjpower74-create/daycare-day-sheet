@@ -342,6 +342,17 @@ test('a change on another device while the sheet is open: the 409 message shows 
   await expect(page.locator('#confirm')).toContainText('Signed out')
 })
 
+test('with /api/info failing, the page shows no guessed centre name and no SAMPLE badge', async ({ page, context, request }) => {
+  await fresh(context, request)
+  await page.route('**/api/info', (route) => route.fulfill({ status: 500, contentType: 'application/json',
+    body: JSON.stringify({ error: 'Something went wrong on our side. Try again.', code: 'server_error' }) }))
+  await page.goto('/door/')
+  await expect(page.getByRole('heading', { name: 'Set up this tablet' })).toBeVisible()
+  await expect(page.locator('#centre-name'), 'the name only comes from centre_name').toHaveText('')
+  await expect(page.locator('.sample-badge:visible'), 'the badge only shows when sample is true').toHaveCount(0)
+  expect(await page.title(), 'no guessed centre name in the title').not.toContain('Little Harbour')
+})
+
 test('a device token that stops working brings back Set up this tablet', async ({ page, context, request }) => {
   await fresh(context, request)
   await setUpTablet(page)
