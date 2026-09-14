@@ -211,6 +211,7 @@ The link is `/note/?t=<token>`: 32 random bytes (43 base64url characters), store
 | `GET /api/office/attendance.csv?from=&to=` | → `text/csv; charset=utf-8`, `Content-Disposition: attachment; filename="attendance-<from>-to-<to>.csv"`. |
 | `GET /api/office/attendance-summary.csv?from=&to=` | → as above, `filename="attendance-summary-<from>-to-<to>.csv"`. |
 | `GET /api/office/register?date=&room_id=` | → **register** for the printed daily register of one homeroom (NLR 39/17 s.45). |
+| `GET /api/office/follow-ups` | → `{ pending_signatures: [{ visit_id, child: { id, name }, which, date, date_label, time_label, person: { id, name }, recorded_by: { id, initials } }], not_signed_out: [{ visit_id, child: { id, name }, date, date_label, in_label, in_by: { id, name } }] }`. `pending_signatures`: staff-recorded times still waiting for the parent's signature, dated in the last 14 dates (today included), newest first, whether or not the child is here now. `not_signed_out`: every visit still open whose date is before today (a forgotten sign-out), oldest first. Today's open visits are not follow-ups. The office Today tab lists both. |
 
 **Attendance.** Each visit is cut at every local midnight it crosses; each part belongs to its local date. For every child and
 date in range: `status` is `present` (a part with minutes, or an open visit), `away` (an absence), `not_booked` (not a booked day),
