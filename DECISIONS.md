@@ -1,0 +1,46 @@
+# Daycare Day Sheet: decisions
+
+Alexander was asleep; the lead (dd-lead) made these calls so the build could keep moving. Each one is easy to reverse.
+Newest at the bottom.
+
+1. **Two slices, split by the sides of the sign-in/out contract.** dd1 = the Worker **and** the door tablet (the "not on the list"
+   rule lives on both sides of one API call); dd2 = the room view, the daily note (staff and parent) and the office. The lead owns
+   the shared test scaffolding, the design tokens, docs/RULES.md and its checker, and writes the cross-slice journey spec.
+2. **Ratio defaults are the cited numbers from NLR 39/17 s.54** (1:3/6, 1:5/10, 1:8/16, 1:10/20, 1:15/30, and 1:7/14 for toddlers
+   with pre-schoolers under s.54(10)). All six were verified word for word, so none ships empty. The operator can change or clear
+   them ("your licence may differ"); a cleared number makes the meter say "Not set", never a guess. Other mixed rooms pick the
+   youngest child's group (s.54(9)) rather than the app computing ages.
+3. **The register never refuses a child who is really there.** A sign-in or a move that puts a room over ratio is recorded and the
+   room turns red at once. A register that leaves out a present child is worse than a red meter (fire drills and evacuations count
+   from it; Policy ELCD-2017-L2 3 says it must reflect the number present at all times).
+4. **Signatures are finger signatures on the tablet.** s.45(2)(d) asks for the signature of the person dropping off and picking up.
+   "No typing" is kept: the parent taps a card, taps their own name, signs, taps Done. Stored as integer strokes, drawn back as SVG.
+5. **Drop-off: anyone on the child's list. Pick-up: only people marked "May pick up".** "Someone else" shows "Not on the list. Get
+   the supervisor." The tablet has no override button (one tap past the rule would be the hole); the supervisor adds the person in
+   the office, which takes a minute, and the Worker refuses an unauthorized sign-out even if a page is changed.
+6. **Staff can record a time when the parent did not sign** (Policy ELCD-2017-L2 2(iv)): the staff member's initials are stored,
+   the visit is flagged, and the door offers "Add a signature" to that person later. The times never change when they sign.
+7. **An electronic register may not replace the paper one without the Department's say.** The Policy manual describes a bound,
+   numbered, pen-written register (ELCD-2017-L2 1). The app prints the register per homeroom so a centre can keep paper too; the
+   question goes to Alexander (NEEDS ALEXANDER) and is written in README and docs/RULES.md as Unknown.
+8. **Store the minimum.** No home addresses, no health numbers (MCP), no allergies or medical notes, no photos, no specimen
+   signatures. Date of birth and one emergency contact are kept because the daily register needs them (s.45(2)(b), (c)). Phone
+   numbers show in the office only, never on the door tablet or the staff phones.
+9. **Nothing is deleted by the app.** Registers are kept at least 7 years (s.45(3)), other records 3 (s.43(2)): children and people
+   are made inactive, logs are voided, visit fixes keep the old times and the reason. A real deployment needs backups (README).
+10. **Parent links are today only and die at local midnight.** 256-bit random token, only its SHA-256 stored, a fresh link per tap,
+    the content is live for that day. Nothing is emailed or texted: staff copy the link or print the note.
+11. **Minutes are whole minutes of each instant** (`floor(ms / 60000)` at both ends), so the parts of a visit cut at midnight always
+    add up to the visit. A visit never signed out counts as present with 0 minutes and a "Not signed out" flag until a supervisor
+    fixes the time with a reason.
+12. **Look: Alexander's approved portfolio look** (dark navy, colour on data, pills, edges and avatars, aurora at most 0.2), with a
+    sea-glass teal accent. Ratio colours are the only loud colours: green OK, amber At the limit, red Over, slate Not set. Print is
+    white with ink only in text and signatures.
+13. **The door tablet is set up once with the supervisor's PIN** (a 30-day device token that can only use the door routes). Staff
+    sign in on their phones with their own PIN (12-hour token, one shift). The office is supervisor only.
+14. **Moving a child is a placement change with times** (Policy ELCD-2017-L2 7), so the printed register can list "Went to Toddler
+    room 10:00 AM, back 10:40 AM".
+15. **One centre per deployment**, like the sibling builds.
+16. **`.rig/` is not committed.** `rig init` marks it machine state.
+17. **The Policy and Standards Manual PDF (17 MB) is committed** as the raw source for four quotes, so `npm run rules` works from a
+    clean clone without the network.

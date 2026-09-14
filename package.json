@@ -1,0 +1,13 @@
+{
+  "name": "daycare-day-sheet",
+  "private": true,
+  "type": "module",
+  "description": "Daily paperwork for a small licensed child care centre in Newfoundland and Labrador. Local build; see README.md.",
+  "scripts": {
+    "demo": "node demo.mjs",
+    "rules": "node tools/check-rules.mjs",
+    "test:worker": "cd worker && npm test",
+    "test:negative": "cd worker && npm run negative",
+    "test:e2e": "cd app && npx playwright test"
+  }
+}

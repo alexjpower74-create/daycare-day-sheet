@@ -1,0 +1,138 @@
+/* Daycare Day Sheet design tokens. Lead-owned: slices read these and style their own pages in their own CSS files.
+   Look: Alexander's approved portfolio look (Shop Board calm pass, 2026-09-12): dark navy base, colour on data, pills,
+   edges and avatars, never a loud backdrop. Sea-glass teal is the one accent. The ratio colours are the only loud colours.
+   System fonts only. Every text/background pair used for text is >= 4.5:1 on --ground and --surface. */
+
+:root {
+  color-scheme: dark;
+
+  /* Ground and surfaces */
+  --ground: #0b1020;
+  --surface: #121a2c;
+  --raised: #1a2440;
+  --glass: rgba(18, 26, 44, 0.8);
+  --line: rgba(255, 255, 255, 0.09);
+  --line-strong: rgba(255, 255, 255, 0.16);
+
+  /* Text: --text 16.9:1, --muted 8.6:1, --faint 5.2:1 on --ground */
+  --text: #eef2f8;
+  --muted: #a6b0c3;
+  --faint: #7d889c;
+
+  /* Accent and primary action (ink on the gradient: 9.9:1 at #14b8a6, 12.3:1 at #2dd4bf) */
+  --accent: #2dd4bf;
+  --primary-from: #14b8a6;
+  --primary-to: #2dd4bf;
+  --on-primary: #04201c;
+
+  /* Ratio meter: fill colours for bars, edges and pills; --on-* is the text on a solid pill */
+  --ok: #4ade80;
+  --limit: #fbbf24;
+  --over: #f87171;
+  --unset: #94a3b8;
+  --on-ok: #052e16;
+  --on-limit: #3a2600;
+  --on-over: #2b0707;
+  --on-unset: #0f172a;
+  --tint: 22%; /* band/pill tint strength: color-mix(in srgb, var(--ok) var(--tint), transparent) */
+
+  /* Child status on the door tablet */
+  --status-in: #4ade80;
+  --status-not-in: #94a3b8;
+  --status-gone: #60a5fa;
+  --status-away: #c4b5fd;
+  --status-not-booked: #64748b;
+  --needs-signature: #fbbf24;
+
+  /* Age groups: avatar rings and room edges */
+  --group-infant: #f9a8d4;
+  --group-toddler: #fdba74;
+  --group-preschool: #86efac;
+  --group-prek: #7dd3fc;
+  --group-school_age: #c4b5fd;
+  --group-toddler_preschool: #fcd34d;
+
+  /* Danger (refusals such as "Not on the list"): solid, white text 6.5:1 */
+  --danger: #f87171;
+  --act-danger: #b91c1c;
+  --on-act: #ffffff;
+
+  /* Shape and size */
+  --radius: 14px;
+  --radius-sm: 10px;
+  --tap: 44px;        /* every tap target on phones and the office */
+  --tap-door: 72px;   /* door tablet buttons and keys (64 px is the floor) */
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 12px 32px rgba(0, 0, 0, 0.35);
+  --aurora-opacity: 0.2;
+  --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.45;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* The SAMPLE badge every screen shows next to the centre name. */
+.sample-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--on-limit);
+  background: var(--limit);
+}
+
+/* Soft ambient light behind glass on the staff and office pages (never on the door tablet or print). */
+.aurora {
+  position: fixed;
+  inset: -20vmax;
+  z-index: -1;
+  pointer-events: none;
+  opacity: var(--aurora-opacity);
+  background:
+    radial-gradient(40vmax 30vmax at 20% 10%, #14b8a6 0%, transparent 60%),
+    radial-gradient(35vmax 25vmax at 85% 20%, #6366f1 0%, transparent 60%),
+    radial-gradient(40vmax 30vmax at 60% 90%, #0ea5e9 0%, transparent 60%);
+  filter: blur(40px);
+}
+
+/* The one place ratio colours are defined: any element with data-state gets --state and --on-state. */
+[data-state="ok"] { --state: var(--ok); --on-state: var(--on-ok); }
+[data-state="at_limit"] { --state: var(--limit); --on-state: var(--on-limit); }
+[data-state="over"] { --state: var(--over); --on-state: var(--on-over); }
+[data-state="unset"] { --state: var(--unset); --on-state: var(--on-unset); }
+
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+
+/* Print: white sheet, ink only in text, rules and signatures. Pages add .no-print to buttons and navigation. */
+@media print {
+  :root {
+    color-scheme: light;
+    --ground: #ffffff;
+    --surface: #ffffff;
+    --raised: #ffffff;
+    --text: #000000;
+    --muted: #333333;
+    --faint: #555555;
+    --line: #999999;
+    --line-strong: #555555;
+  }
+  html, body { background: #ffffff; color: #000000; }
+  .aurora, .no-print { display: none !important; }
+  .sample-badge { color: #000000; background: none; border: 1px solid #000000; }
+}
