@@ -2,8 +2,8 @@
 // only used to set up the day (children arriving at the door, staff tokens) and to read back what the page did.
 import { test, expect } from '@playwright/test'
 import {
-  NOW, at, fresh, assertNoThirdParty, setNow, tap, type, keypad, stateColour, STATE_RGB, api, bearer, staffToken, doorToken,
-  signInViaApi, presenceViaApi, shot, EDUCATOR_PIN,
+  NOW, at, fresh, assertNoThirdParty, setNow, newContext, tap, type, keypad, stateColour, STATE_RGB, api, bearer, staffToken, doorToken,
+  signInViaApi, presenceViaApi, shot, EDUCATOR_PIN, SUPERVISOR_PIN,
 } from '../helpers.mjs'
 
 const POLL = 6_500 // one 5-second poll plus its answer
@@ -186,4 +186,56 @@ test('Record without a signature puts the child in the room and the visit awaits
   expect(visit.awaiting_signature).toBe('in')
   expect(visit.in_recorded_by).toEqual({ id: 's_marie', initials: 'MT' })
   expect(visit.in_signature_svg).toBeNull()
+})
+
+// dd1's cross-review of dd2 M1, item 1. The page's timers are held by the test clock, so its last poll is the one from sign-in and
+// the only way the sheet can know about the other phone's nap is the fresh GET when it opens.
+test('the sheet takes the nap from the server when it opens, and a nap changed on another phone redraws it with the API text', async ({ page, request }) => {
+  const kevin = await staffToken(request, '2604')
+  await signInViaApi(request, await doorToken(request), 'c_ava', 'p_ava_mother')
+  await page.clock.install({ time: '2026-01-01T00:00:00Z' })
+  await page.clock.pauseAt('2026-01-01T00:00:01Z')
+  await signInOnPage(page)
+  await expect(page.locator('button.child[data-child="c_ava"]')).not.toContainText('Asleep')
+
+  const started = await api(request, 'POST', '/api/staff/children/c_ava/logs', { kind: 'nap_start' }, bearer(kevin))
+  expect(started.status, 'Kevin starts the nap on his phone').toBe(201)
+  await openChild(page, 'c_ava')
+  await expect(sheet(page).locator('button.log[data-kind^="nap_"]'), 'sheet opened after the other phone started the nap').toHaveAttribute('data-kind', 'nap_end')
+
+  // The sheet is open showing Nap end; Kevin ends the nap on his phone, then this person taps the stale Nap end.
+  expect((await api(request, 'POST', '/api/staff/children/c_ava/logs', { kind: 'nap_end' }, bearer(kevin))).status).toBe(201)
+  const refusal = await api(request, 'POST', '/api/staff/children/c_ava/logs', { kind: 'nap_end' }, bearer(kevin))
+  expect([refusal.status, refusal.body.code]).toEqual([409, 'not_napping'])
+  await tap(page, sheet(page).locator('button.log[data-kind="nap_end"]'), 'stale Nap end')
+  await expect(page.locator('#toast .toast-text'), 'the API text after the refusal').toHaveText(refusal.body.error)
+  await expect(sheet(page).locator('button.log[data-kind^="nap_"]'), 'sheet redrawn from the server after the refusal').toHaveAttribute('data-kind', 'nap_start')
+})
+
+// dd1's cross-review of dd2 M1, item 2.
+test('Undo shows only on your own logs, and on every log for the supervisor', async ({ page, request, browser }) => {
+  const kevin = await staffToken(request, '2604')
+  await signInViaApi(request, await doorToken(request), 'c_ava', 'p_ava_mother')
+  const kevinsLog = (await api(request, 'POST', '/api/staff/children/c_ava/logs', { kind: 'mood', value: 'happy' }, bearer(kevin))).body.log
+
+  await signInOnPage(page) // Marie
+  await openChild(page, 'c_ava')
+  await tap(page, sheet(page).locator('button.log[data-kind="diaper"][data-value="wet"]'), 'Wet diaper')
+  const mine = page.locator('#today-logs [data-log]').filter({ hasText: 'Wet diaper' })
+  await expect(mine.locator('button.undo'), 'Undo on Marie\'s own log').toHaveCount(1)
+  const kevins = page.locator(`#today-logs [data-log="${kevinsLog.id}"]`)
+  await expect(kevins).toContainText('Happy')
+  await expect(kevins.locator('button.undo'), 'no Undo on Kevin\'s log for Marie').toHaveCount(0)
+
+  const office = await newContext(browser, 'phone')
+  const dana = await office.newPage()
+  await signInOnPage(dana, SUPERVISOR_PIN)
+  await openChild(dana, 'c_ava')
+  const kevinsForDana = dana.locator(`#today-logs [data-log="${kevinsLog.id}"]`)
+  await expect(kevinsForDana.locator('button.undo'), 'the supervisor can undo anyone\'s log').toHaveCount(1)
+  await tap(dana, kevinsForDana.locator('button.undo'), 'Undo Kevin\'s log as the supervisor')
+  await expect(kevinsForDana).toHaveCount(0)
+  expect((await logsViaApi(request, kevin, 'c_ava')).map((l) => l.id)).not.toContain(kevinsLog.id)
+  assertNoThirdParty(office)
+  await office.close()
 })

@@ -169,3 +169,28 @@ test('print hides Print and every .no-print, and the note sections stay visible'
   await expect(page.locator('.sample-badge')).toBeVisible()
   await shot(page, testInfo, 'web', 'parent-note-print')
 })
+
+// dd1's cross-review of dd2 M1, item 3: the "What we did today" boxes come from the note's rooms_today, so a room the child was in
+// earlier today still gets its box after the child has moved back, even with no line written for it yet.
+test('the staff note offers a "What we did today" box for every room the child was in today, in order', async ({ page, request }) => {
+  const marie = await staffToken(request)
+  await signInViaApi(request, await doorToken(request), 'c_ava', 'p_ava_mother')
+  const move = async (room) => expect((await api(request, 'POST', '/api/staff/children/c_ava/move', { room_id: room }, bearer(marie))).status).toBe(200)
+  await move('r_toddler')
+  await move('r_infant')
+  const note = (await api(request, 'GET', '/api/staff/children/c_ava/note', undefined, bearer(marie))).body
+  expect(note.rooms_today.map((r) => r.room_id), 'API rooms_today').toEqual(['r_infant', 'r_toddler'])
+  expect(note.activities).toEqual([])
+
+  await signInOnPage(page)
+  await page.goto('/room/note/?child=c_ava')
+  const boxes = page.locator('textarea.activity')
+  await expect(boxes, 'one box per room in rooms_today').toHaveCount(2)
+  expect(await boxes.evaluateAll((els) => els.map((e) => e.dataset.room))).toEqual(['r_infant', 'r_toddler'])
+
+  await type(page, page.locator('textarea.activity[data-room="r_toddler"]'), 'Painting with the toddlers.')
+  await tap(page, page.locator('button.save-activity[data-room="r_toddler"]'), 'Save the toddler room line')
+  await expect(section(page, 'activities')).toContainText('Painting with the toddlers.Toddler room')
+  const after = (await api(request, 'GET', '/api/staff/children/c_ava/note', undefined, bearer(marie))).body
+  expect(after.activities).toEqual([{ room_id: 'r_toddler', room_name: 'Toddler room', text: 'Painting with the toddlers.' }])
+})

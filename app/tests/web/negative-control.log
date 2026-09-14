@@ -195,3 +195,107 @@ Running 1 test using 1 worker
   1 failed
     [chromium-390] › tests/web/targets.spec.mjs:95:1 › the open child sheet never has a control under its header or its toast
 ----- verdict: RED as intended
+
+===== (e) attendance-day: the part of a visit after midnight is dropped from the next date
+      2026-09-14T12:45:42.069Z · break in the copy's app/public/office/attendance.js · attendance.spec.mjs --grep "splits a visit across midnight" --project chromium-390
+
+Running 1 test using 1 worker
+
+[1/1] [chromium-390] › tests/web/attendance.spec.mjs:49:1 › the Week view splits a visit across midnight and its totals match the API
+  1) [chromium-390] › tests/web/attendance.spec.mjs:49:1 › the Week view splits a visit across midnight and its totals match the API 
+
+    Error: Ava Sep 15 cell
+
+    expect(locator).toHaveText(expected) failed
+
+    Locator:  locator('[data-cell="c_ava:2026-09-15"]')
+    Expected: "1 h 15 min"
+    Received: ""
+    Timeout:  8000ms
+
+    Call log:
+      - Ava Sep 15 cell locator('[data-cell="c_ava:2026-09-15"]') with timeout 8000ms
+      - waiting for locator('[data-cell="c_ava:2026-09-15"]')
+        20 × locator resolved to <td data-cell="c_ava:2026-09-15" class="att-cell status-present"></td>
+           - unexpected value ""
+
+
+      56 |   await expect(page.locator('#attendance-range')).toHaveText('Sep 14 to Sep 20, 2026')
+      57 |   await expect(cell(page, 'c_ava', FROM), 'Ava Sep 14 cell').toHaveText('1 h 30 min')
+    > 58 |   await expect(cell(page, 'c_ava', '2026-09-15'), 'Ava Sep 15 cell').toHaveText('1 h 15 min')
+         |                                                                      ^
+      59 |   await expect(page.locator('[data-total="c_ava"]')).toHaveText(minutesLabel(ava.minutes))
+      60 |   await expect(page.locator('#attendance-total')).toHaveText(minutesLabel(data.totals.minutes))
+      61 |   await expect(page.locator('#attendance-child-days')).toHaveText(String(data.totals.child_days))
+        at <repo>/app/tests/web/attendance.spec.mjs:58:70
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    tests/results/web-attendance-the-Week-vi-43952-nd-its-totals-match-the-API-chromium-390/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: tests/results/web-attendance-the-Week-vi-43952-nd-its-totals-match-the-API-chromium-390/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    tests/results/web-attendance-the-Week-vi-43952-nd-its-totals-match-the-API-chromium-390/trace.zip
+    Usage:
+
+        npx playwright show-trace tests/results/web-attendance-the-Week-vi-43952-nd-its-totals-match-the-API-chromium-390/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+  1 failed
+    [chromium-390] › tests/web/attendance.spec.mjs:49:1 › the Week view splits a visit across midnight and its totals match the API
+----- verdict: RED as intended
+
+===== (f) ratio-reload: ratio form shows the cited default, not the saved number
+      2026-09-14T12:45:55.489Z · break in the copy's app/public/office/office.js · office.spec.mjs --grep "an edit to 1:4" --project chromium-390
+
+Running 1 test using 1 worker
+
+[1/1] [chromium-390] › tests/web/office.spec.mjs:82:1 › Rooms and ratios: an edit to 1:4 turns the room view at the limit, clearing it shows Not set, and the cited number comes back
+  1) [chromium-390] › tests/web/office.spec.mjs:82:1 › Rooms and ratios: an edit to 1:4 turns the room view at the limit, clearing it shows Not set, and the cited number comes back 
+
+    Error: ratio form after reload
+
+    expect(locator).toHaveValue(expected) failed
+
+    Locator:  locator('input[name="per-infant"]')
+    Expected: "4"
+    Received: "3"
+    Timeout:  8000ms
+
+    Call log:
+      - ratio form after reload locator('input[name="per-infant"]') with timeout 8000ms
+      - waiting for locator('input[name="per-infant"]')
+        19 × locator resolved to <input min="1" max="50" step="1" type="number" id="per-infant" name="per-infant" inputmode="numeric" data-field="children_per_caregiver"/>
+           - unexpected value "3"
+
+
+       97 |   await expect(page.locator('#ratio-status-infant')).toHaveText('Saved. The room view uses it now.')
+       98 |   await page.reload()
+    >  99 |   await expect(page.locator('input[name="per-infant"]'), 'ratio form after reload').toHaveValue('4')
+          |                                                                                     ^
+      100 |   await expect(page.locator('[data-rule="infant"]')).toContainText('Changed from the cited number.')
+      101 |   await shot(page, testInfo, 'web', 'office-rooms')
+      102 |
+        at <repo>/app/tests/web/office.spec.mjs:99:85
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    tests/results/web-office-Rooms-and-ratio-acd12-the-cited-number-comes-back-chromium-390/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: tests/results/web-office-Rooms-and-ratio-acd12-the-cited-number-comes-back-chromium-390/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    tests/results/web-office-Rooms-and-ratio-acd12-the-cited-number-comes-back-chromium-390/trace.zip
+    Usage:
+
+        npx playwright show-trace tests/results/web-office-Rooms-and-ratio-acd12-the-cited-number-comes-back-chromium-390/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+  1 failed
+    [chromium-390] › tests/web/office.spec.mjs:82:1 › Rooms and ratios: an edit to 1:4 turns the room view at the limit, clearing it shows Not set, and the cited number comes back
+----- verdict: RED as intended
