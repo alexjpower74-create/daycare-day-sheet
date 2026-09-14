@@ -22,6 +22,7 @@ slice's own tree. Pass/fail comes from each command's own exit code, echoed insi
 | dd1 still here | `2e15ca1` | an open visit dated today is `still_here` (JSON, CSV Note, summary counts earlier dates only); short door pills on one line | Worker unit 32 / 0 / 0, API 43 / 0 / 0, setup 1 / 0 / 0, Worker controls 12 of 12 red; door 28 / 0 / 0, door controls 7 of 7 red |
 | dd1 sample flag | `d6d5dc3` | `/api/info` answers `sample: false` before the centre row exists (no SAMPLE badge on a real deployment before setup) | Worker unit 32 / 0 / 0, empty D1 1 / 0 / 0, API 43 / 0 / 0, setup 1 / 0 / 0, Worker controls 13 of 13 red; door 28 / 0 / 0, door controls 7 of 7 red |
 | dd1 office cross-review | `841f82a` | dd1 read dd2's office against API.md: 7 findings (attendance and register ignore `still_here`; Today not on follow-ups; a closed home room blocked any child edit, fixed in the Worker; Fix a time sends the wrong date on an overnight visit's second day; no way to remove an absence; a failed `/api/info` leaves "Loading…") | Worker unit 32 / 0 / 0, empty D1 1 / 0 / 0, API 44 / 0 / 0, setup 1 / 0 / 0; Worker controls 14 of 14 red (+ homeroom) |
+| dd2 round 5 | `6211efc` | register problems shown on the page (no browser dialog, specs fail on one); Today follow-ups from `GET /api/office/follow-ups` with day labels and Fix a time in place; "Still here" in attendance and on the register | web 134 / 0 / 6 skipped; web controls 7 of 7 red (+ still-here) |
 
 ## Rules check
 
