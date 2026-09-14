@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en-CA">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex">
+  <title>Daily note</title>
+  <link rel="stylesheet" href="/theme.css">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="note-page">
+  <div class="aurora" aria-hidden="true"></div>
+  <header class="topbar" data-sticky-header>
+    <div class="topbar-inner">
+      <div class="topbar-main">
+        <p class="centre"><span class="centre-name" id="centre-name">SAMPLE Little Harbour Child Care (demo)</span> <span class="sample-badge">SAMPLE</span></p>
+        <p class="topbar-meta">Daily note</p>
+      </div>
+    </div>
+  </header>
+  <main class="note-main">
+    <p id="note-error" class="alert" role="alert" hidden></p>
+    <p id="note-stale" class="notice no-print" role="status" hidden></p>
+    <article id="note" class="note" aria-live="polite"></article>
+    <div class="note-actions no-print">
+      <button type="button" id="print" class="btn btn-outline no-print">
+        <svg class="icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 9V4h10v5M7 17H5a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-2M7 14h10v6H7z"/></svg>
+        Print
+      </button>
+    </div>
+  </main>
+  <script type="module" src="/note/note.js"></script>
+</body>
+</html>
