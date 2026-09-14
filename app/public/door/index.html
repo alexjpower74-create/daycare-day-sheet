@@ -3,15 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Door tablet · SAMPLE Little Harbour Child Care (demo)</title>
+  <title>Door tablet</title>
   <link rel="stylesheet" href="/theme.css">
   <link rel="stylesheet" href="/door/door.css">
 </head>
 <body class="door">
   <header id="door-head" class="door-head" data-sticky-header>
     <div class="door-bar">
-      <p class="centre"><span id="centre-name" class="centre-name">SAMPLE Little Harbour Child Care (demo)</span>
-        <span id="sample-badge" class="sample-badge">SAMPLE</span></p>
+      <!-- The name comes only from /api/info centre_name, and the badge shows only when sample is true (door.js). -->
+      <p class="centre"><span id="centre-name" class="centre-name"></span>
+        <span id="sample-badge" class="sample-badge" hidden>SAMPLE</span></p>
       <p class="door-clock"><span id="date-line"></span> <span id="time-line" class="door-time"></span></p>
     </div>
     <nav id="chips" class="chips" aria-label="Rooms" hidden></nav>

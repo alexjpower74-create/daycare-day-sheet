@@ -321,6 +321,52 @@ test('status pills: short labels stay on one line at 1024×768; the long Still s
   await shot(page, testInfo, 'door', '8-status-pills')
 })
 
+test('a change on another device while the sheet is open: the 409 message shows and the sheet starts again with Sign out', async ({ page, context, request }) => {
+  await fresh(context, request)
+  await setUpTablet(page)
+  await tap(page, card(page, 'c_ava'), 'Ava card')
+  await tap(page, page.locator('#action-in'), 'Sign in')
+  await tap(page, person(page, 'p_ava_mother'), 'Sarah')
+  // Behind the tablet's back: Ava is signed in on another device.
+  await signInViaApi(request, await doorToken(request), 'c_ava', 'p_ava_father')
+  await drawSignature(page, page.locator('#pad'))
+  await tap(page, page.locator('#pad-done'), 'Done')
+  const notice = page.locator('#sheet-notice')
+  await expect(notice).toHaveText('Ava M. (SAMPLE) is already signed in.')
+  await expect(notice).toHaveAttribute('role', 'alert')
+  await expect(page.locator('#action-out'), 'the sheet now offers Sign out').toBeVisible()
+  await expect(page.locator('#pad'), 'the refused pad is gone').toHaveCount(0)
+  await tap(page, page.locator('#action-out'), 'Sign out')
+  await tap(page, person(page, 'p_ava_gran'), 'Joan')
+  await signOnPad(page)
+  await expect(page.locator('#confirm')).toContainText('Signed out')
+})
+
+test('with /api/info failing, the page shows no guessed centre name and no SAMPLE badge', async ({ page, context, request }) => {
+  await fresh(context, request)
+  await page.route('**/api/info', (route) => route.fulfill({ status: 500, contentType: 'application/json',
+    body: JSON.stringify({ error: 'Something went wrong on our side. Try again.', code: 'server_error' }) }))
+  await page.goto('/door/')
+  await expect(page.getByRole('heading', { name: 'Set up this tablet' })).toBeVisible()
+  await expect(page.locator('#centre-name'), 'the name only comes from centre_name').toHaveText('')
+  await expect(page.locator('.sample-badge:visible'), 'the badge only shows when sample is true').toHaveCount(0)
+  expect(await page.title(), 'no guessed centre name in the title').not.toContain('Little Harbour')
+})
+
+test('with /api/info failing, the children grid still renders and refreshes', async ({ page, context, request }) => {
+  await fresh(context, request)
+  await page.clock.install()
+  await page.route('**/api/info', (route) => route.fulfill({ status: 500, contentType: 'application/json',
+    body: JSON.stringify({ error: 'Something went wrong on our side. Try again.', code: 'server_error' }) }))
+  await page.goto('/door/')
+  await keypad(page, SUPERVISOR_PIN, page.locator('#pin-enter'))
+  await expect(card(page, 'c_ava'), 'the grid renders without /api/info').toHaveAttribute('data-status', 'not_in_yet')
+  await signInViaApi(request, await doorToken(request), 'c_ava', 'p_ava_mother')
+  await page.clock.runFor(15_000)
+  await expect(card(page, 'c_ava'), 'the grid refreshed without /api/info').toHaveAttribute('data-status', 'in')
+  await expect(page.locator('#offline')).toBeHidden()
+})
+
 test('a device token that stops working brings back Set up this tablet', async ({ page, context, request }) => {
   await fresh(context, request)
   await setUpTablet(page)

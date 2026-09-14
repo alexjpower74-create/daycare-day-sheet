@@ -28,16 +28,19 @@ let sheet = null
 async function refresh() {
   clearTimeout(pollTimer)
   if (!doorSession.token()) return showSetup()
-  try {
-    const [i, d] = await Promise.all([doorApi.info(), doorApi.children()])
-    info = i
-    data = d
-    offline.hidden = true
+  // Info (name, date, clock) and the children are fetched independently: a failed /api/info must not throw away a good grid.
+  const [i, d] = await Promise.allSettled([doorApi.info(), doorApi.children()])
+  if (i.status === 'fulfilled') {
+    info = i.value
     drawHeader()
+  }
+  if (d.status === 'fulfilled') {
+    data = d.value
+    offline.hidden = true
     whenIdle(drawGrid)
-  } catch (e) {
-    if (e.status === 401) return showSetup()
-    offline.textContent = `${e.message} Trying again shortly.`
+  } else {
+    if (d.reason.status === 401) return showSetup()
+    offline.textContent = `${d.reason.message} Trying again shortly.`
     offline.hidden = false
   }
   pollTimer = setTimeout(refresh, POLL_MS)
@@ -46,7 +49,8 @@ async function refresh() {
 function drawHeader() {
   if (!info) return
   $('centre-name').textContent = info.centre_name
-  $('sample-badge').hidden = info.sample === false
+  $('sample-badge').hidden = info.sample !== true
+  document.title = info.centre_name ? `Door tablet · ${info.centre_name}` : 'Door tablet'
   $('date-line').textContent = info.long_label
   $('time-line').textContent = info.time_label
 }
@@ -171,7 +175,7 @@ function openSheet(detail) {
         h('div', {}, h('p', { class: 'sheet-name' }, c.name), h('p', { class: 'sheet-room' }, c.room_name || ''))),
       h('p', { class: 'sheet-centre' },
         h('span', { class: 'centre-name' }, info?.centre_name || ''),
-        info?.sample === false ? null : h('span', { class: 'sample-badge' }, 'SAMPLE'))),
+        info?.sample === true ? h('span', { class: 'sample-badge' }, 'SAMPLE') : null)),
     body)
   const bump = () => {
     if (!sheet) return
@@ -342,6 +346,7 @@ async function submit(d, job, btn) {
     else answer = await doorApi.addSignature(job.pending.visit_id, job.pending.which, job.pending.person.id, signature)
   } catch (e) {
     if (e.status === 401) return showSetup()
+    if (e.status === 409 && ['already_in', 'not_in', 'bad_state'].includes(e.code)) return restartSheet(d.child.id, e.message)
     showStepError(e.message)
     btn.disabled = !pad.hasInk()
     return
@@ -352,6 +357,23 @@ async function submit(d, job, btn) {
   clearTimeout(sheet.idle)
   show(() => confirmStep(job, answer), { push: false })
   sheet.confirmTimer = setTimeout(() => closeSheet(), CONFIRM_MS)
+  refresh()
+}
+
+// The child changed on another device while this sheet was open (a 409): say so in the API's words, re-read the child and start
+// again from step 1, so a refused Sign in becomes Sign out instead of the same write again.
+async function restartSheet(childId, message) {
+  let detail
+  try {
+    detail = await doorApi.child(childId)
+  } catch (e) {
+    if (e.status === 401) return showSetup()
+    showStepError(e.message)
+    return
+  }
+  if (!sheet) return
+  sheet.steps = []
+  show(() => [h('p', { id: 'sheet-notice', class: 'sheet-error', role: 'alert' }, message), ...actionStep(detail)])
   refresh()
 }
 
