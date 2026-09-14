@@ -2,7 +2,7 @@
 // Polls GET /api/staff/today every 5 s and after every write. A poll re-renders only the regions whose data changed, waits while a
 // finger is down, and never touches an open sheet: the sheet refreshes only after the person's own write in it.
 import { api, staffSession } from '/api.js'
-import { h, $, $$, renderIf, whenIdle, poll, toast, hideToast, avatar, meterPill, childrenCount, showError, clearErrors, icon } from '/ui.js'
+import { h, $, $$, renderIf, whenIdle, poll, toast, hideToast, avatar, meterPill, childrenCount, showError, clearErrors, icon, applyCentre } from '/ui.js'
 import { showStaffSignIn } from '/room/session.js'
 
 const ROOM_KEY = 'daycare-day-sheet:room'
@@ -46,7 +46,7 @@ function signedOut(message) {
   $('#signout').hidden = true
   $('#me-name').textContent = ''
   api.info().then((i) => {
-    if (i.centre_name) $('#centre-name').textContent = i.centre_name
+    applyCentre(i)
     $('#date-label').textContent = i.date_label
   }).catch(() => {})
   showStaffSignIn(app, { message, onSignedIn: start })
@@ -98,7 +98,7 @@ const findChild = (childId) => {
 // ---------- page ----------
 function render() {
   if (!today || !$('#room-strip')) return
-  if (today.centre_name) $('#centre-name').textContent = today.centre_name
+  applyCentre(today)
   $('#date-label').textContent = today.date_label
   $('#me-name').textContent = today.me?.staff?.name ? ` · ${today.me.staff.name}` : ''
 

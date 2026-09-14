@@ -90,7 +90,7 @@ function end(v, which) {
 }
 
 function build(reg) {
-  if (reg.centre_name) document.title = `Daily register · ${reg.room.name} · ${reg.centre_name}`
+  document.title = reg.centre_name ? `Daily register · ${reg.room.name} · ${reg.centre_name}` : `Daily register · ${reg.room.name}`
   const rows = reg.rows.flatMap((row) => {
     const visits = row.visits.length ? row.visits : [null]
     return visits.map((v, i) => h('tr', { 'data-register-row': row.child.name },
@@ -108,7 +108,7 @@ function build(reg) {
   })
   app.replaceChildren(
     h('header', { class: 'register-head' },
-      h('p', { class: 'centre' }, h('span', { class: 'centre-name' }, reg.centre_name), reg.sample ? h('span', { class: 'sample-badge' }, 'SAMPLE') : null),
+      h('p', { class: 'centre' }, h('span', { class: 'centre-name' }, reg.centre_name || ''), reg.sample === true ? h('span', { class: 'sample-badge' }, 'SAMPLE') : null),
       h('h1', {}, `Daily register: ${reg.room.name}`),
       h('p', { class: 'register-date' }, `${reg.long_label}, ${reg.date.slice(0, 4)}`)),
     reg.rows.length

@@ -1,7 +1,7 @@
 // Office (supervisor only): Today, Children, Rooms and ratios, Staff, Attendance. Talks only to docs/API.md through /api.js.
 // Every write re-reads the tab from the API, so what the page shows after saving is what the Worker kept.
 import { api, staffSession } from '/api.js'
-import { h, $, $$, toast, avatar, meterPill, childrenCount, showError, clearErrors, icon } from '/ui.js'
+import { h, $, $$, toast, avatar, meterPill, childrenCount, showError, clearErrors, icon, applyCentre } from '/ui.js'
 import { createKeypad } from '/keypad.js'
 import { showAttendance } from '/office/attendance.js'
 import { addDays } from '/office/dates.js'
@@ -32,7 +32,7 @@ function closeDialogs() {
 async function loadInfo() {
   try {
     info = await api.info()
-    if (info.centre_name) $('#centre-name').textContent = info.centre_name
+    applyCentre(info)
   } catch { /* the header keeps its text */ }
 }
 

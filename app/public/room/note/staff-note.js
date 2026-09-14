@@ -2,7 +2,7 @@
 // The note exactly as a parent sees it (note/render.js), then "A line from your educator", "What we did today" per room, the parent
 // link (today only) and Print. Nothing is sent from here: the link is copied or the note is printed.
 import { api, staffSession } from '/api.js'
-import { h, $, renderIf, showError, clearErrors, toast, icon } from '/ui.js'
+import { h, $, renderIf, showError, clearErrors, toast, icon, applyCentre } from '/ui.js'
 import { renderNote } from '/note/render.js'
 import { showStaffSignIn } from '/room/session.js'
 
@@ -28,7 +28,7 @@ async function load() {
 
 function build(note, today) {
   const isToday = note.date === today.date
-  if (note.centre_name) $('#centre-name').textContent = note.centre_name
+  applyCentre(note)
   document.title = `Daily note: ${note.child.name}`
 
   const noteEl = h('article', { id: 'note', class: 'note' })
@@ -155,6 +155,7 @@ async function copyLink(input, label) {
   label.__timer = setTimeout(() => { label.textContent = 'Copy link' }, 5000)
 }
 
+api.info().then(applyCentre).catch(() => {})
 if (!childId) {
   app.replaceChildren(h('p', { class: 'alert', role: 'alert' }, 'Open a child in the room view, then tap Daily note.'))
 } else if (!staffSession.token()) {
