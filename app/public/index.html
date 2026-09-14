@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en-CA">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>SAMPLE Little Harbour Child Care (demo) · Daycare Day Sheet</title>
+  <link rel="stylesheet" href="/theme.css">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="start">
+  <div class="aurora" aria-hidden="true"></div>
+  <main class="start-main">
+    <header class="start-head">
+      <p class="eyebrow">Daycare Day Sheet</p>
+      <h1 class="centre"><span class="centre-name" id="centre-name">SAMPLE Little Harbour Child Care (demo)</span> <span class="sample-badge">SAMPLE</span></h1>
+      <p class="muted" id="today-line"></p>
+    </header>
+    <nav class="start-cards" aria-label="Open a screen">
+      <a class="start-card" href="/door/">
+        <span class="start-card-title">Door tablet</span>
+        <span class="start-card-text">Parents sign children in and out.</span>
+      </a>
+      <a class="start-card" href="/room/">
+        <span class="start-card-title">Room view</span>
+        <span class="start-card-text">Staff phones: ratios, quick logs, moves.</span>
+      </a>
+      <a class="start-card" href="/office/">
+        <span class="start-card-title">Office</span>
+        <span class="start-card-text">Children, pickups, rooms, staff, attendance.</span>
+      </a>
+    </nav>
+    <p class="start-foot">Parent notes open from a link the room staff make.</p>
+  </main>
+  <script type="module">
+    import { api } from '/api.js'
+    api.info().then((i) => {
+      document.getElementById('centre-name').textContent = i.centre_name
+      document.getElementById('today-line').textContent = i.long_label
+    }).catch(() => {})
+  </script>
+</body>
+</html>

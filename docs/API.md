@@ -53,7 +53,7 @@ JSON in, JSON out. Errors are always
 | `POST /api/signin` | anyone | `{ pin }` → 200 `{ token, role, staff: { id, name, initials }, expires_at }` (12 hours). Wrong PIN → 401 `"That PIN is not right."` `field: "pin"`. |
 | `POST /api/door/unlock` | anyone | `{ pin }` → 200 `{ token, role: "door", expires_at }` (30 days). Wrong PIN → 401 as above; an educator's PIN → 403 `forbidden` `"Only the supervisor can set up this tablet."` |
 | `POST /api/signout` | any token | → 200 `{ ok: true }`; the token stops working. |
-| `GET /api/info` | anyone | → `{ centre_name, sample, phone, zone, today, date_label, long_label, now, now_local, time_label }` |
+| `GET /api/info` | anyone | → `{ centre_name, sample, phone, zone, today, date_label, long_label, now, now_local, time_label }`. Before the centre row exists (a migrated, empty D1 before first setup or `POST /api/test/reset`), `centre_name` and `phone` are `""`; pages then show no centre name rather than a guessed one. |
 
 ## SAMPLE centre (what `POST /api/test/reset` creates; tests rely on these ids)
 
@@ -173,13 +173,15 @@ the pages show red at once.
   "naps": [{ "label": "12:40 PM to 2:05 PM (1 h 25 min)", "minutes": 85 } | { "label": "Asleep since 12:40 PM", "minutes": null }],
   "toileting": [{ "label": "Wet diaper", "time_label": "10:10 AM" }],
   "moods": [{ "label": "Happy", "time_label": "9:30 AM" }],
-  "activities": [{ "room_name": "Infant room", "text": "Sensory bins and a walk to the harbour." }],
+  "activities": [{ "room_id": "r_infant", "room_name": "Infant room", "text": "Sensory bins and a walk to the harbour." }],
+  "rooms_today": [{ "room_id": "r_infant", "room_name": "Infant room" }],
   "staff_notes": [{ "text": "Loved the water table.", "time_label": "10:30 AM", "by_initials": "MT" }],
   "note_line": "A great day." | null,
   "infant_record": true,
   "updated_label": "Updated 2:07 PM" }
 ```
-Lists are oldest first; voided logs are left out. `activities` are the rooms the child was placed in that day whose line is not empty. `infant_record` is true
+Lists are oldest first; voided logs are left out. `activities` are the rooms the child was placed in that day whose line is not empty. `rooms_today` lists every room the child was
+placed in that day, in order, so the staff note can offer a "What we did today" line for a room that has no text yet. `infant_record` is true
 for the `infant` group (the page then titles it "Daily record of sleeping, eating and toileting", NLR 39/17 s.26(3)).
 
 ## Parent link (public)
@@ -212,7 +214,7 @@ The link is `/note/?t=<token>`: 32 random bytes (43 base64url characters), store
 
 **Attendance.** Each visit is cut at every local midnight it crosses; each part belongs to its local date. For every child and
 date in range: `status` is `present` (a part with minutes, or an open visit), `away` (an absence), `not_booked` (not a booked day),
-or `missing` (booked, no visit, no absence). An **open** visit (never signed out) counts as present with 0 minutes and a
+`missing` (booked, on or before today, no visit, no absence), or `upcoming` (booked, after today, nothing recorded yet). An **open** visit (never signed out) counts as present with 0 minutes and a
 `"Not signed out"` flag until a supervisor fixes the time.
 ```
 { "from": "2026-09-14", "to": "2026-09-20", "dates": ["2026-09-14", …],
@@ -251,6 +253,6 @@ Rows are the children with a visit or a placement in that room that day.
 Reset, then around `today` (from `X-Test-Now` or the clock): the last 15 weekdays of attendance for every booked child (arrivals
 7:30–9:15 AM, pickups 3:45–5:30 PM, generated scribble signatures, each person from the child's list), 4 absences with different
 reasons, one visit last week never signed out, one staff-recorded drop-off awaiting a signature; today by 9:00 AM: Marie in the
-infant room with 3 infants signed in (at the limit), Kevin in the toddler room with 4 toddlers (ok), Priya in the preschool room
-with 9 pre-schoolers (over, needs 1 more staff), meals, a nap, diapers, moods and one activity line per room. Answers
+infant room with 3 infants signed in (at the limit), Kevin in the toddler room with all 6 toddlers (over, needs 1 more staff), Priya in the preschool
+room with 6 pre-schoolers (ok); no child is moved out of their own room, meals, a nap, diapers, moods and one activity line per room. Answers
 `{ today, note_url }` (a parent link for Ava today).

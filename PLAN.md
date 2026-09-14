@@ -215,7 +215,7 @@ open visits → present, 0 minutes, `Not signed out`, and summary counts; `missi
 the Total row equals the column sums; CSV CRLF, quoting of `Smith, "Junior"`, formula guard on a child named `=SUM(A1) (SAMPLE)`,
 filename; **fix a time**: reason required, out before in → 400, future → 400, the edit is listed with who and why and the old times,
 and the CSV uses the fixed time; register rows (dob, emergency contact, both signatures as SVG, moves label, recorded-by, edited);
-the demo seed gives non-empty attendance for the last 15 weekdays and today's three meters `at_limit` / `ok` / `over`.
+the demo seed gives non-empty attendance for the last 15 weekdays and today's three meters `at_limit` (infant) / `over` (toddler) / `ok` (preschool).
 **First setup for a real centre** (added by the lead): `worker/tools/first-setup.mjs --centre "<name>" --phone "<709…>" --supervisor
 "<name>" --pin <4–6 digits>` (no network, no SAMPLE rows) writes `worker/first-setup.sql` (git-ignored): the centre row with
 `sample = 0`, the six cited ratio rules, and one supervisor with a PBKDF2 hash + salt made exactly as `auth.js` does. It is what
