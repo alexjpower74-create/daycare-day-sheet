@@ -162,3 +162,68 @@ Behaviour worth knowing for M2 (not a finding): a staff token dies 12 hours afte
 4. **The walk's console filter** now ignores the browser's "Failed to load resource" lines, since the wrong-PIN step causes a 401 on purpose. A real failure still fails the walk's own checks.
 
 After the fixes, the walk against the real Worker passes in chromium-390, chromium-1280, webkit-390 and webkit-1280, and the mock walk passes all four too.
+
+## M2: Playwright for the room view and notes (2026-09-14)
+
+Rebased by merging `main` (2d5305d). Every spec runs against dd1's real Worker, started fresh by `tests/start-worker.mjs`. The mock is deleted as the lead asked: `app/public/room/api.mock.js`, the `?mock=1` branch in `api.js`, `tests/web/mock-shots.mjs` and `tests/web/serve.mjs`. The M1 "Deviations" about the mock no longer apply.
+
+### Specs — DONE
+
+Run with `cd app && E2E_PORT=7803 npx playwright test tests/web`. Result: **50 passed, 2 skipped, 0 failed** (2.6 min) across chromium-390, chromium-1280, webkit-390 and webkit-1280. The 2 skips are the tap-size test on the 1280 projects, skipped on purpose: it is a phone check.
+
+**`room.spec.mjs`** (7 tests):
+- A wrong PIN shows "That PIN is not right." and `waitForResponse` sees the 401.
+- Tapping "I'm in this room" makes the card read "0 children · 1 staff".
+- Three infants signed in through the API make the card `at_limit`, checked by `data-state` **and** `stateColour` = `STATE_RGB.at_limit`, and `#room-label` equals the API's label.
+- A fourth within one poll (6.5 s) turns it `over` (both checks) with "Needs 1 more staff.".
+- "I'm leaving this room" gives exactly "4 children with no staff in the room." and it stays over.
+- Moving Ava to the toddler room through the sheet changes both cards: 3 · 0 and 1 · 0, and the toddler card goes over.
+- Every quick log, 13 buttons plus a note, by real taps with the clock moved a minute per log. Each shows "Saved: <label>", becomes the newest Today row, and the API labels match exactly.
+- The meal chip is Breakfast at 9:00 AM and Lunch at 12:00 PM (`setNow`, then a reload).
+- Nap start shows "Asleep" on the card, and Nap end takes it away.
+- Undo removes the log from the page and from the API.
+- Record without a signature puts Owen in the grid with "Signature needed"; the API visit has `awaiting_signature: "in"` and `in_recorded_by` MT.
+
+**`note.spec.mjs`** (3 tests):
+- **Logs to midnight:**
+  - Logs entered by taps show in every staff note section.
+  - "A line from your educator" and "What we did today" save.
+  - Make parent link produces a 43-character token and "Works until midnight tonight.".
+  - Copy link says "Copied". In chromium the clipboard is read back and equals the link. In webkit only the read is skipped, with the reason written as an annotation: Playwright's WebKit cannot grant clipboard-read.
+  - The link opens in a new **phone** context, and every section matches `GET /api/note/:token` item by item. SAMPLE is visible and no phone number appears.
+  - A "Tired" log added on the staff page shows on the parent page after its next poll (the Playwright clock advanced 61 s).
+  - It still works at 11:59 PM NDT.
+  - At 12:00 AM NDT the next day, the **poll** replaces the note with the API's 410 text in `#note-error`, and so does a reload. No `[data-section]` remains either time.
+- **Unknown token:** shows the API's 404 text and no section.
+- **Print media:** hides `#print` and every `.no-print` (the test also asserts there is at least one), and every section stays visible.
+
+**`targets.spec.mjs`** (3 tests):
+- The SAMPLE badge is visible on `/`, `/room/`, `/room/note/`, `/note/`, `/office/`, with no sideways scroll on any.
+- At 390, every visible button and button-link is at least 44 × 44 and hit-tests to itself, after centring it in its scroller. This covers the keypad (all 12 keys), the room view, the child sheet, the staff note with the link made, and the parent note. Contrast is at least 4.5 for Enter, "I'm in this room" (asserted to be the primary style), "Save note" and "Make parent link".
+- **Open child sheet:** "Ate all" still hit-tests to itself right after its toast appears, with no scrolling, and a second tap works. Then every one of the sheet's controls (more than 20) is scrolled to the very top of the sheet body, just under the header and its toast line, and still hit-tests to itself there.
+
+### Negative controls — DONE (all 4 red for their intended reason)
+
+`cd app && node tests/web/negative-all.mjs`, or one at a time. `negative-lib.mjs` does the following:
+1. Copies `worker/` and `app/public/` into `app/.negative/<name>/` (git-ignored) and breaks the copy only.
+2. Runs one test with `--project chromium-390` on E2E_PORT 7807, with `E2E_WORKER_DIR` pointing at the copy.
+3. Passes only if that test failed **and** the output names the intended assertion. "Still green", "red for another reason" and "did not run" all count as not proven, and a missing anchor exits 2.
+4. Appends to `app/tests/web/negative-control.log` (repo paths replaced by `<repo>`; the log has 0 home paths) and removes the copy.
+
+| control | break in the copy | red output (from the log) |
+|---|---|---|
+| (a) `negative-card-state.mjs` | `room.js` card: `'data-state': 'ok'` whatever the meter says | `Error: room card data-state at_limit … unexpected value "ok"`. Note: with every state rendered `ok`, the card-state check goes red at its **first** state (at_limit), before it gets to over. The marker accepts any `room card data-state` failure. |
+| (b) `negative-over-colour.mjs` | copy's `style.css` + `[data-state="over"] { --state: var(--ok); --on-state: var(--on-ok); }` | The `data-state over` check passed, then `Error: stateColour of the over card: expect(received).toBe(expected)`. So the colour check reads the colour, not the attribute. |
+| (c) `negative-expiry-page.mjs` | `note/note.js`: on a 404/410 `return` (keep the note) instead of `showGone` | `Error: #note-error after the poll at midnight … Expected: "This link was for Monday, September 14 and stopped working at midnight. Ask the centre for today's note." Received: ""` |
+| (d) `negative-overlay.mjs` | copy's `style.css`: a transparent `.log-grid::after` covering the meal buttons | `Error: tap(Ate all) hit-test at 73,308: something else is on top … Received: "<div class=\"log-grid\">…"` |
+
+### Screenshots — DONE
+
+All 46 in `app/tests/web/shots/` are now from the real Worker, produced by the specs through `shot()`: chromium and webkit × 390 and 1280 × start, room-signin, room, room-over, sheet, sheet-toast, record, staff-note, parent-note, parent-note-print, parent-note-error, plus parent-note-expired at 390. No mock screenshot is left.
+
+### Left for M3 / others
+
+- The office, the register and its specs: M3.
+- **W1 (dd1):** `signature_svg` still lacks the contract's stroke attributes. My M3 register will rely on API.md and add no path CSS, so it needs W1 fixed first.
+- `tests/web/cross-review-dd1-m1.mjs` is kept as the record of the cross-review. Delete it whenever you like.
+- Every server I started is stopped: 7801, 7803, 7807 and their inspector ports are free.
