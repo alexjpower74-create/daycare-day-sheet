@@ -98,7 +98,7 @@ caught before the real check runs.
 
 - **Whether an electronic daily register counts.** The Policy and Standards Manual describes a bound, numbered, pen-written register
   (ELCD-2017-L2 1). Whether a tablet register with finger signatures is accepted is Unknown until the Department of Education (Early
-  Learning and Child Care) says so. The office prints the register per homeroom so a centre can keep paper as well.
+  Learning and Child Care) says so; Alexander decided on 2026-09-15 to proceed as if it is (DECISIONS.md 36). The office prints the register per homeroom so a centre can keep paper as well.
 - **Group size counts children present, not children assigned.** s.53(3) limits the children *assigned* to a homeroom; the meter counts
   who is in the room now. The office does not yet warn when more registered children are assigned to a room than its maximum.
 - **Ages are not checked against the room.** A child whose age has moved out of the room's range is not flagged; the operator picks the

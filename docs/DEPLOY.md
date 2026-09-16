@@ -1,7 +1,32 @@
-# Deploying Daycare Day Sheet (not done; Alexander decides)
+# Deploying Daycare Day Sheet
 
-Nothing here has been run. The build is local only (`wrangler dev --local`). This is the list for the day a real centre
-wants it, after Alexander has reviewed the app **and the centre has the answers in "Before any real centre" below**.
+## Before a real daycare uses this
+
+**The live copy at <https://daycare-day-sheet.alexjpower74.workers.dev> is a SAMPLE-data demo only.** The centre, children, parents, staff, attendance and signatures on it are
+invented; it holds no real people. Do not enter a real child into it.
+
+Before any real centre uses this app with real families, a **privacy notice for parents (and staff) must be written and shown**:
+what is collected about each child (name, date of birth, emergency contact, who dropped off and picked up, times, signatures, meals,
+naps, diapering, mood, notes), who can see it (room staff, the supervisor, the parent through their daily-note link), how long it is
+kept (daily registers 7 years under NLR 39/17 s.45(3), other records 3 years under s.43(2)) and where it lives (Cloudflare D1), under
+Newfoundland and Labrador's ATIPPA, 2015 and PHIA, or PIPEDA, as they apply to the operator (public body, not-for-profit or
+commercial). This is deferred, not dropped: Alexander decided on 2026-09-15 that the notice is written before real use, not before the
+demo.
+
+## What exists (deployed 2026-09-15, Alexander's go)
+
+| Thing | Value |
+|---|---|
+| Worker | `daycare-day-sheet` at <https://daycare-day-sheet.alexjpower74.workers.dev> (serves `/api/*` and `app/public/`) |
+| D1 database | `daycare-day-sheet`, id `92b5632b-3b9f-4825-bb61-0f0ea4f81cd3`, region ENAM, migration `0001_init.sql` applied `--remote` |
+| Data | the SAMPLE demo seed (`seedDemo`, generated locally on a `wrangler dev --local` server with `TEST_MODE=1`, dumped to SQL, loaded with `wrangler d1 execute --remote`). `TEST_MODE` was never set on the live Worker; `POST /api/test/reset` answers 404 there. |
+| Secrets, cron, R2, KV, custom domain | none |
+
+The seed is dated to the day it was loaded (2026-09-15). Older days show as history and follow-ups; to refresh the demo, repeat
+the seed steps above (reset locally, dump, `d1 execute --remote`). A real centre never uses this seed; it follows the checklist below.
+
+The checklist below is for the day a real centre wants it, after Alexander has reviewed the app **and the centre has the answers in
+"Before any real centre" below**.
 
 ## What gets created
 
@@ -36,11 +61,13 @@ wants it, after Alexander has reviewed the app **and the centre has the answers 
 
 ## Before any real centre (these are not technical)
 
-- **Ask the Department of Education (Early Learning and Child Care)** whether an electronic daily register with finger signatures
-  is accepted in place of the bound, pen-written register the Policy and Standards Manual describes (ELCD-2017-L2 1; see
-  docs/RULES.md R18 and "Unknown"). Until they say yes, the centre keeps the paper register and uses the printed one as a copy.
-- **Privacy:** a privacy notice for parents and staff; a review under PHIA (the Personal Health Information Act) and ATIPPA as they
-  apply to the operator (not-for-profit or commercial); who may see what; how a parent asks for a copy (Child Care Act s.28).
+- **Finger signatures: decided.** Alexander decided on 2026-09-15 to proceed on the basis that an electronic daily register with
+  finger signatures is accepted. The Policy and Standards Manual still describes a bound, pen-written register (ELCD-2017-L2 1; see
+  docs/RULES.md R18), so a centre should confirm with the Department of Education (Early Learning and Child Care) and can keep the
+  printed register per homeroom as a copy meanwhile.
+- **Privacy (must be done before real use; see the top of this file):** a privacy notice for parents and staff; a review under PHIA
+  (the Personal Health Information Act), ATIPPA, 2015 and PIPEDA as they apply to the operator (public body, not-for-profit or
+  commercial); who may see what; how a parent asks for a copy (Child Care Act s.28).
 - **Backups and retention:** daily registers must be kept at least 7 years (NLR 39/17 s.45(3)); other records 3 years (s.43(2)).
   D1 Time Travel covers 30 days only, so schedule a regular export (`wrangler d1 export --remote`) to storage the centre controls,
   and test a restore.

@@ -23,7 +23,9 @@ DECISIONS.md.
 
 ## Rules that bite here
 
-- **Local only.** `wrangler dev --local`. No `wrangler deploy`, `secret put`, `d1 create`, `--remote`, Pages or DNS.
+- **Deploys only when Alexander says so (he did on 2026-09-15).** Live SAMPLE demo: Worker `daycare-day-sheet` + D1 (docs/DEPLOY.md).
+  Development stays `wrangler dev --local`; never `TEST_MODE` on the live Worker; never real children in the demo copy.
+- **Public repo.** Run `check-no-personal-data` before every push; no secrets, machine names or home-folder paths.
 - **Nothing is sent.** No email, no SMS. Parent links are "Copy link" and a printable page.
 - **SAMPLE people only.** Centre "SAMPLE Little Harbour Child Care (demo)", every child, parent and staff name ends in
   "(SAMPLE)". No real names, no photos (avatars are initials), no health numbers, no birth certificates.

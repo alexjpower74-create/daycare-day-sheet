@@ -190,7 +190,8 @@ The app is not legal advice. Each centre checks its own licence: **"your licence
 
 - **Whether an electronic daily register is accepted** in place of the bound, pen-written one (R18). Ask the Department of Education,
   Early Learning and Child Care, before a centre relies on it. Until then, print the register per homeroom.
-- **Whether a finger signature on a tablet counts as a signature** for s.45(2)(d). Same question to the Department.
+- **Whether a finger signature on a tablet counts as a signature** for s.45(2)(d). Not found in these sources. Alexander decided on
+  2026-09-15 to proceed as if it is accepted (DECISIONS.md 36); a real centre should still ask the Department.
 - **What "locked enclosure" means for electronic records** (R21), and what PHIA / ATIPPA review a real deployment needs.
 - **Family child care homes** (NLR 39/17 s.69 ratios): out of scope; this app is for centres.
 - **Certification rules per room** (s.54(6)–(8)): not checked by the app; it counts people, not their certificates.

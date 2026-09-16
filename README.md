@@ -2,9 +2,26 @@
 
 The daily paperwork of a small licensed child care centre in Newfoundland and Labrador: parents sign children in and out on a
 door tablet, staff see live staff-to-child ratios per room on their phones, each child gets a daily note home, and the office
-gets attendance by day, week or month with a CSV for funding and fee paperwork. Local build only; nothing is deployed or sent.
+gets attendance by day, week or month with a CSV for funding and fee paperwork. Nothing is sent (no email, no SMS).
+
+**Live SAMPLE demo:** <https://daycare-day-sheet.alexjpower74.workers.dev> (Cloudflare Worker + D1, deployed 2026-09-15). PINs below work there too.
+
+## Before a real daycare uses this
+
+**The live copy at <https://daycare-day-sheet.alexjpower74.workers.dev> is a SAMPLE-data demo only.** The centre, children, parents, staff, attendance and signatures on it are
+invented; it holds no real people. Do not enter a real child into it.
+
+Before any real centre uses this app with real families, a **privacy notice for parents (and staff) must be written and shown**:
+what is collected about each child (name, date of birth, emergency contact, who dropped off and picked up, times, signatures, meals,
+naps, diapering, mood, notes), who can see it (room staff, the supervisor, the parent through their daily-note link), how long it is
+kept (daily registers 7 years under NLR 39/17 s.45(3), other records 3 years under s.43(2)) and where it lives (Cloudflare D1), under
+Newfoundland and Labrador's ATIPPA, 2015 and PHIA, or PIPEDA, as they apply to the operator (public body, not-for-profit or
+commercial). This is deferred, not dropped: Alexander decided on 2026-09-15 that the notice is written before real use, not before the
+demo.
 
 ## Open it (on this computer)
+
+The live demo above is the same app on the same SAMPLE seed; this runs it locally.
 
 ```
 cd ~/Projects/"Daycare Day Sheet"
@@ -77,14 +94,17 @@ npm run test:e2e:negative                       # door, web and journey negative
 
 ## What deploying needs
 
-Nothing is deployed. `docs/DEPLOY.md` has the steps. In short: D1 database `daycare-day-sheet`, Worker `daycare-day-sheet`
+Deployed 2026-09-15 as a SAMPLE demo: Worker `daycare-day-sheet` at <https://daycare-day-sheet.alexjpower74.workers.dev>, D1 `daycare-day-sheet`. `docs/DEPLOY.md` has the steps and ids. In short: D1 database `daycare-day-sheet`, Worker `daycare-day-sheet`
 (static assets from `app/public`), **no secrets** (PINs are hashes in D1), **no cron**, no R2. The real centre and its first supervisor
 come from `worker/tools/first-setup.mjs`. Never set `TEST_MODE`.
 
 Before any real centre uses it (not technical):
-- **Ask the Department of Education (Early Learning and Child Care)** whether an electronic daily register with finger signatures is
-  accepted. The Policy and Standards Manual describes a bound, numbered, pen-written register (docs/RULES.md R18).
-- **A privacy notice** for parents and staff, and a **PHIA / ATIPPA review** as they apply to the operator.
+- **Finger signatures on the tablet: decided.** Alexander decided on 2026-09-15 to proceed on the basis that an electronic daily
+  register with finger signatures is accepted. The Policy and Standards Manual describes a bound, numbered, pen-written register
+  (docs/RULES.md R18), so a real centre should still confirm with the Department of Education (Early Learning and Child Care) and can
+  print the register per homeroom meanwhile.
+- **A privacy notice** for parents and staff (see "Before a real daycare uses this" at the top), and a **PHIA / ATIPPA / PIPEDA
+  review** as they apply to the operator.
 - **Backups:** daily registers must be kept at least 7 years (s.45(3)); D1 Time Travel covers 30 days, so a regular export is needed.
 
 ## Where to pick this up

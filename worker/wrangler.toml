@@ -2,13 +2,13 @@ name = "daycare-day-sheet"
 main = "src/index.js"
 compatibility_date = "2026-09-01"
 
-# Local only tonight (wrangler dev --local). TEST_MODE is never set here: tests pass --var TEST_MODE:1.
+# Live SAMPLE demo since 2026-09-15. TEST_MODE is never set here: tests pass --var TEST_MODE:1.
 
 [[d1_databases]]
 binding = "DB"
 database_name = "daycare-day-sheet"
-# Placeholder: a real deploy replaces this with the id from `wrangler d1 create` (see docs/DEPLOY.md).
-database_id = "00000000-0000-0000-0000-000000000000"
+# Created 2026-09-15 by `wrangler d1 create daycare-day-sheet` (SAMPLE demo deployment).
+database_id = "92b5632b-3b9f-4825-bb61-0f0ea4f81cd3"
 migrations_dir = "migrations"
 
 [assets]

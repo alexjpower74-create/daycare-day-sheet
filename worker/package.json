@@ -2,7 +2,7 @@
   "name": "daycare-day-sheet-worker",
   "private": true,
   "type": "module",
-  "description": "Daycare Day Sheet Worker: the API in docs/API.md on D1. No npm dependencies; uses the wrangler on PATH. Local only.",
+  "description": "Daycare Day Sheet Worker: the API in docs/API.md on D1. No npm dependencies; uses the wrangler on PATH.",
   "scripts": {
     "test": "node tests/run.mjs",
     "test:unit": "node tests/run.mjs --unit-only",

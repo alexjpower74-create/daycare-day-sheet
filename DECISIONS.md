@@ -82,3 +82,6 @@ Newest at the bottom.
     either day's cell (dd1's cross-review).
 35. **A mistaken absence can be removed; a visit never can.** Absences are a supervisor's note and can be deleted; visits are the daily
     register (kept 7 years) and are only ever fixed, with the old times and the reason kept.
+36. **Tablet finger signatures are assumed accepted (Alexander, 2026-09-15).** The law (docs/RULES.md "Unknown") does not say; the app
+    proceeds on that basis and a real centre confirms with the Department. The parent privacy notice is deferred but required before
+    real use (README.md and docs/DEPLOY.md, "Before a real daycare uses this"). The live deployment is a SAMPLE-data demo only.
